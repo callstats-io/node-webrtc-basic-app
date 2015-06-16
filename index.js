@@ -3,6 +3,13 @@ var app = express();
 var http = require('http');
 var numClients = 0;
 
+var usernames = [];
+var data = {rooms: []};
+var sockets = {};
+var ids = {};
+
+
+
 var server = http.createServer(app);
 //app.listen(8080);
 app.root = __dirname;
@@ -30,14 +37,24 @@ io.sockets.on('connection', function (socket){
       socket.emit('log', array);
   }
 
-  socket.on('message', function (message) {
+  socket.on('message', function (message,to,from) {
     log('Got message:', message);
     // for a real app, would be room only (not broadcast)
-    socket.broadcast.emit('message', message);
+    for(var i=0; i< io.sockets.sockets.length; i++)
+    {
+      if(io.sockets.sockets[i].id === ids[to]) {
+        io.sockets.sockets[i].emit('onSignaling',message,from,to);
+      }
+    }
+    //socket.broadcast.emit('message', message);
   });
 
-  socket.on('create or join', function (room) {
-    console.log('Got message:', room);
+  socket.on('participant', function (room,userId) {
+    console.log('Got participant', room,userId);
+    socket.username = userId;
+    console.log(userId +' has connected with socketid '+socket.id);
+    ids[userId] = socket.id;
+    usernames.push(userId);
 
     log('Room ' + room + ' has ' + numClients + ' client(s)');
     log('Request to create or join room ' + room);
@@ -46,13 +63,12 @@ io.sockets.on('connection', function (socket){
       socket.join(room);
       socket.emit('created', room);
     } else if (numClients >= 1) {
-      io.sockets.in(room).emit('join', room);
+      //io.sockets.in(room).emit('newUserJoin', userId);
       socket.join(room);
-      socket.emit('joined', room);
-    } else { // max two clients
-      socket.emit('full', room);
+      //socket.emit('newUserJoined', userId);
     }
 
+    io.sockets.emit('newUserJoined', userId);
     numClients++;
     socket.emit('emit(): client ' + socket.id + ' joined room ' + room);
     socket.broadcast.emit('broadcast(): client ' + socket.id + ' joined room ' + room);
