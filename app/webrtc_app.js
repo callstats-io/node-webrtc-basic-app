@@ -5,6 +5,8 @@ var userPCs = [];
 var isChannelReady = false;
 var calls;
 
+var isScreenSharingOn = false;
+
 var room = 'foo';
 console.log("Room is " + room);
 
@@ -26,6 +28,46 @@ if (room !== '') {
       socket.emit('participant', room,myUserId);
     }
   });
+
+  /*dogetScreenShare(function(status){
+    if (status === true) {
+      console.log("Participant");
+      socket.emit('participant', room,myUserId);
+    }
+  });*/
+}
+
+document.getElementById("switchBtn").onclick = switchScreen;
+
+function switchScreen() {
+    //document.getElementById("demo").innerHTML = Date();
+    //
+    if(isScreenSharingOn)
+    {
+      removeLocalStream();
+      doGetUserMedia(function(status){
+        if (status === true) {
+          //socket.emit('participant', room,myUserId);
+          isScreenSharingOn = false;
+          addLocalStream();
+        }
+
+      });
+    }
+    else
+    {
+      removeLocalStream();
+      dogetScreenShare(function(status){
+        if (status === true) {
+          //console.log("Participant");
+          //socket.emit('participant', room,myUserId);
+          isScreenSharingOn = true;
+          addLocalStream();
+        }
+
+      });
+    }
+
 }
 
 socket.on('created', function (room){
@@ -57,6 +99,24 @@ socket.on('log', function (array){
   console.log.apply(console, array);
 });
 
+
+function addLocalStream()
+{
+  for(userId in userPCs)
+  {
+    var pc = userPCs[userId].getPeerConnection()
+    pc.addStream(localStream);
+  }
+}
+
+function removeLocalStream()
+{
+  for(userId in userPCs)
+  {
+    var pc = userPCs[userId].getPeerConnection()
+    pc.removeStream(localStream);
+  }
+}
 ////////////////////////////////////////////////
 
 function sendMessage(message,to,from){
@@ -96,11 +156,12 @@ onSignaling = function(message,to,from) {
       });
     }
   } else if (userPCs[to]) {
-    console.log("Call does  exist,no need to create one");
+    console.log("Call does exist,no need to create one");
     userPCs[to].onChannelMessage(message);
     // var msg = JSON.parse(message);
     if (msg.type === "bye") {
       var pc = userPCs[to].getPeerConnection();
+      pc.close();
       userPCs[to]=null;
       calls = calls - 1;
       console.log("bye message counter", message, calls);
@@ -113,19 +174,6 @@ onSignaling = function(message,to,from) {
   }
 };
 
-
-
-function successCallback(stream) {
-  window.stream = stream; // stream available to console
-  if (window.URL) {
-    localVideo.src = window.URL.createObjectURL(stream);
-  } else {
-    localVideo.src = stream;
-  }
-  localStream = stream;
-  console.log("Local Stream in success is ",localStream);
-}
-
 //error callback function for getUserMedia
 function errorCallback(error) {
   console.log('navigator.getUserMedia error: ', error);
@@ -133,19 +181,59 @@ function errorCallback(error) {
 
 function doGetUserMedia(callback)
 {
-    localVideo = document.querySelector('#localVideo');
-    console.log("Do get User Media");
-    getUserMedia(constraints, function(stream) {
-          console.log("User has granted access to local media.");
-          attachMediaStream(localVideo,stream);
-          localVideo.style.opacity = 1;
-          localStream = stream;
-          if (callback)
-              callback(true);
-          },errorCallback);
+  localVideo = document.querySelector('#localVideo');
+  console.log("Do get User Media");
+  getUserMedia(constraints, function(stream) {
+        console.log("User has granted access to local media.");
+        attachMediaStream(localVideo,stream);
+        localVideo.style.opacity = 1;
+        localStream = stream;
+        if (callback)
+            callback(true);
+        },errorCallback);
 }
 
+function dogetScreenShare(callback)
+{
+  localVideo = document.querySelector('#localVideo');
+  console.log("In dogetScreenShare ",window.sessionStorage.getItem('getScreenMediaJSExtensionId'));
+  if (window.sessionStorage.getScreenMediaJSExtensionId) {
+            chrome.runtime.sendMessage(window.sessionStorage.getScreenMediaJSExtensionId,
+                {type:'getScreen', id: 1}, null,
+                function (data) {
+                    if (data.sourceId === '') { // user canceled
+                        var error = new Error('NavigatorUserMediaError');
+                        error.name = 'PERMISSION_DENIED';
+                        console.log(error.name);
+                        callback(error);
+                    } else {
+                        var constraints = constraints || {audio: false, video: {
+                            mandatory: {
+                                chromeMediaSource: 'desktop',
+                                maxWidth: window.screen.width,
+                                maxHeight: window.screen.height,
+                                maxFrameRate: 3
+                            },
+                            optional: [
+                                {googLeakyBucket: true},
+                                {googTemporalLayeredScreencast: true}
+                            ]
+                        }};
+                        constraints.video.mandatory.chromeMediaSourceId = data.sourceId;
+                        getUserMedia(constraints,function(stream) {
+                          console.log("User has granted access to local media.");
+                          attachMediaStream(localVideo,stream);
+                          localVideo.style.opacity = 1;
+                          localStream = stream;
+                          if (callback)
+                              callback(true);
+                          },errorCallback);
+                    }
+                }
+            );
+        }
 
+}
 
 
 

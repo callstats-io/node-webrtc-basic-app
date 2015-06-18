@@ -11,6 +11,7 @@ PeerConnectionChannel = function(to,from,div,localStreamParam)
   var isCallStarted = false;
   var localVideo;
   var remoteVideo;
+  var isCallActive = false;
 
   var pc_config = {'iceServers': [{'url': 'stun:stun.l.google.com:19302'}]};
 
@@ -108,12 +109,15 @@ PeerConnectionChannel = function(to,from,div,localStreamParam)
     }
   }
 
+  function onRemoteHangup(){
+    stop();
+  }
+
   function maybeStart() {
-    console.log("local stream is ",localStream)
+    console.log("maybeStart local stream is ",localStream)
     if (!isCallStarted && localStream) {
       console.log("may be start call");
       createPeerConnection();
-      pc.addStream(localStream);
       isCallStarted = true;
       if (isInitiator)
         doCall();
@@ -123,9 +127,11 @@ PeerConnectionChannel = function(to,from,div,localStreamParam)
   function createPeerConnection() {
     try {
       pc = new RTCPeerConnection(null);
+      pc.addStream(localStream);
       pc.onicecandidate = handleIceCandidate;
       pc.onaddstream = handleRemoteStreamAdded;
       pc.onremovestream = handleRemoteStreamRemoved;
+      pc.onnegotiationneeded = handleOnNegotiationNeeded;
       console.log('Created RTCPeerConnnection');
     } catch (e) {
       console.log('Failed to create PeerConnection, exception: ' + e.message);
@@ -133,6 +139,14 @@ PeerConnectionChannel = function(to,from,div,localStreamParam)
       return;
     }
   }
+
+  function handleOnNegotiationNeeded(event) {
+    console.log("handleOnNegotiationNeeded");
+    //pc.createOffer(setLocalAndSendMessage, handleCreateOfferError);
+    if(isCallActive)
+      doCall();
+  }
+
   function handleIceCandidate(event) {
     console.log('handleIceCandidate event: ', event);
     if (event.candidate) {
@@ -150,6 +164,7 @@ PeerConnectionChannel = function(to,from,div,localStreamParam)
     console.log('Remote stream added.');
     remoteVideo.src = window.URL.createObjectURL(event.stream);
     remoteStream = event.stream;
+    isCallActive = true;
   }
 
   function handleCreateOfferError(event){
@@ -160,12 +175,14 @@ PeerConnectionChannel = function(to,from,div,localStreamParam)
     console.log('Sending offer to peer');
     pc.createOffer(setLocalAndSendMessage, handleCreateOfferError);
     setRemoteVideo(to,function(status){});
+
   }
 
   function doAnswer() {
     console.log("do answer");
     pc.createAnswer(setLocalAndSendMessage, null, sdpConstraints);
     setRemoteVideo(to,function(status){});
+
   }
 
   function handleRemoteStreamRemoved(event) {
@@ -181,21 +198,7 @@ PeerConnectionChannel = function(to,from,div,localStreamParam)
     _div.removeChild(remoteVideo);
     isInitiator = false;
     isCallStarted = false;
-  }
-
-  function successCallback(stream) {
-    window.stream = stream; // stream available to console
-    if (window.URL) {
-      localVideo.src = window.URL.createObjectURL(stream);
-    } else {
-      localVideo.src = stream;
-    }
-    localStream = stream;
-    console.log("Local Stream in success is ",localStream);
-    //sendMessage('got user media',to,from);
-    if(isInitiator) {
-      maybeStart();
-    }
+    isCallActive = false;
   }
 
   //error callback function for getUserMedia

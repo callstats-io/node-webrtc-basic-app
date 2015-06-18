@@ -1,6 +1,9 @@
 var express = require('express');
 var app = express();
 var http = require('http');
+var https = require('https');
+var fs = require('fs');
+var path = require('path');
 var numClients = 0;
 
 var usernames = [];
@@ -11,10 +14,28 @@ var ids = {};
 
 
 var server = http.createServer(app);
+
+
+fs.exists = fs.exists || require('path').exists;
+
+var options = {
+    key:    fs.readFileSync('ssl/server.key'),
+    cert:   fs.readFileSync('ssl/server.crt'),
+    ca:     fs.readFileSync('ssl/ca.crt'),
+    requestCert:        true,
+    rejectUnauthorized: false,
+    passphrase: "v2ZIZj2jKUap"
+};
+
+var httpsServer = https.createServer(options, app);
+
+
+
 //app.listen(8080);
 app.root = __dirname;
 
 server.listen(8080);
+httpsServer.listen(4430);
 //Static folder for serving js files.
 app.use("/", express.static(__dirname + '/app'));
 
@@ -22,7 +43,8 @@ app.get('/', function (req, res) {
 	res.sendFile('/app/index.html',{root: __dirname})
 });
 
-var io = require('socket.io').listen(server);
+var io = require('socket.io').listen(httpsServer);
+
 
 console.log("IO created");
 
