@@ -25,3 +25,29 @@ build/Release
 # Dependency directory
 # https://www.npmjs.org/doc/misc/npm-faq.html#should-i-check-my-node_modules-folder-into-git
 node_modules
+
+#  Apple related
+#####
+# OS X temporary files that should never be committed
+#
+# c.f. http://www.westwind.com/reference/os-x/invisibles.html
+ 
+.DS_Store
+ 
+# c.f. http://www.westwind.com/reference/os-x/invisibles.html
+ 
+.Trashes
+ 
+# c.f. http://www.westwind.com/reference/os-x/invisibles.html
+ 
+*.swp
+ 
+#
+# *.lock - this is used and abused by many editors for many different things.
+#    For the main ones I use (e.g. Eclipse), it should be excluded 
+#    from source-control, but YMMV.
+#   (lock files are usually local-only file-synchronization on the local FS that should NOT go in git)
+# c.f. the "OPTIONAL" section at bottom though, for tool-specific variations!
+ 
+*.lock
+ 
