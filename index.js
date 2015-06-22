@@ -57,7 +57,7 @@ io.sockets.on('connection', function (socket){
       socket.emit('log', array);
   }
 
-  socket.on('message', function (message,to,from) {
+  socket.on('signaling', function (message,to,from) {
     log('Got message:', message);
     // for a real app, would be room only (not broadcast)
     for(var i=0; i< io.sockets.sockets.length; i++)

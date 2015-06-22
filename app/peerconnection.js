@@ -1,5 +1,5 @@
 
-PeerConnectionChannel = function(to,from,div,localStreamParam)
+PeerConnectionChannel = function(to,from,div,localStreamParam,onPCInitialized)
 {
   this.div = div;
   this.from = from;
@@ -12,6 +12,8 @@ PeerConnectionChannel = function(to,from,div,localStreamParam)
   var localVideo;
   var remoteVideo;
   var isCallActive = false;
+
+  var onPCInitializedCallback = onPCInitialized;
 
   var pc_config = {'iceServers': [{'url': 'stun:stun.l.google.com:19302'}]};
 
@@ -126,7 +128,7 @@ PeerConnectionChannel = function(to,from,div,localStreamParam)
 
   function createPeerConnection() {
     try {
-      pc = new RTCPeerConnection(null);
+      pc = new RTCPeerConnection(pc_config,{optional: [{RtpDataChannels: true},{DtlsSrtpKeyAgreement: false}]});
       pc.addStream(localStream);
       pc.onicecandidate = handleIceCandidate;
       pc.onaddstream = handleRemoteStreamAdded;
@@ -270,6 +272,7 @@ PeerConnectionChannel = function(to,from,div,localStreamParam)
     //sessionDescription.sdp = preferOpus(sessionDescription.sdp);
     pc.setLocalDescription(sessionDescription);
     console.log('setLocalAndSendMessage sending message' , sessionDescription);
+    onPCInitializedCallback(pc,to);
     sendMessage(sessionDescription,to,from);
   }
 }
