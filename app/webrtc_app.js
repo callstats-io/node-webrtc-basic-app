@@ -28,20 +28,11 @@ if (room !== '') {
       socket.emit('participant', room,myUserId);
     }
   });
-
-  /*dogetScreenShare(function(status){
-    if (status === true) {
-      console.log("Participant");
-      socket.emit('participant', room,myUserId);
-    }
-  });*/
 }
 
 document.getElementById("switchBtn").onclick = switchScreen;
 
 function switchScreen() {
-    //document.getElementById("demo").innerHTML = Date();
-    //
     if(isScreenSharingOn)
     {
       removeLocalStream();
@@ -132,19 +123,13 @@ socket.on('onSignaling', function (message,to,from) {
 onSignaling = function(message,to,from) {
   var msg = message;
   if ((userPCs[to] === undefined) || (userPCs[to] === null)) {
-    // var msg = JSON.parse(message);
     if (msg.type === "bye") {
       console.log("bye message", message);
       userPCs[to]=null;
     } else {
-      //Call does not exist
-      //var _div = document.getElementById('videos');
       var _div = 'videos';
       console.log("Call does not exist, create one ",localStream,msg.type);
       userPCs[to] = new PeerConnectionChannel(to,from,_div,localStream);
-
-      //stats.beginFabricMonitoring(confID);
-
       userPCs[to].answer(function(status){
         if (status === true) {
           console.log("Call is received now");
@@ -158,7 +143,6 @@ onSignaling = function(message,to,from) {
   } else if (userPCs[to]) {
     console.log("Call does exist,no need to create one");
     userPCs[to].onChannelMessage(message);
-    // var msg = JSON.parse(message);
     if (msg.type === "bye") {
       var pc = userPCs[to].getPeerConnection();
       pc.close();

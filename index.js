@@ -29,8 +29,6 @@ var options = {
 
 var httpsServer = https.createServer(options, app);
 
-
-
 //app.listen(8080);
 app.root = __dirname;
 
