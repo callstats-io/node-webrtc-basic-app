@@ -95,9 +95,11 @@ PeerConnectionChannel = function(to,from,div,localStreamParam,onPCInitialized)
       if (!isInitiator && !isCallStarted) {
         maybeStart();
       }
+      console.log("Offer sdp ",message);
       pc.setRemoteDescription(new RTCSessionDescription(message));
       doAnswer();
     } else if (message.type === 'answer' && isCallStarted) {
+      console.log("Answer sdp ",message);
       pc.setRemoteDescription(new RTCSessionDescription(message));
     } else if (message.type === 'candidate' && isCallStarted) {
       var candidate = new RTCIceCandidate({
@@ -128,7 +130,7 @@ PeerConnectionChannel = function(to,from,div,localStreamParam,onPCInitialized)
 
   function createPeerConnection() {
     try {
-      pc = new RTCPeerConnection(pc_config,{optional: [{RtpDataChannels: true},{DtlsSrtpKeyAgreement: false}]});
+      pc = new RTCPeerConnection(pc_config,{optional: [{RtpDataChannels: true},{DtlsSrtpKeyAgreement: true}]});
       pc.addStream(localStream);
       pc.onicecandidate = handleIceCandidate;
       pc.onaddstream = handleRemoteStreamAdded;
@@ -182,7 +184,7 @@ PeerConnectionChannel = function(to,from,div,localStreamParam,onPCInitialized)
 
   function doAnswer() {
     console.log("do answer");
-    pc.createAnswer(setLocalAndSendMessage, null, sdpConstraints);
+    pc.createAnswer(setLocalAndSendMessage, function(error){console.log("create answer error");}, sdpConstraints);
     setRemoteVideo(to,function(status){});
 
   }
@@ -270,6 +272,7 @@ PeerConnectionChannel = function(to,from,div,localStreamParam,onPCInitialized)
   function setLocalAndSendMessage(sessionDescription) {
     // Set Opus as the preferred codec in SDP if Opus is present.
     //sessionDescription.sdp = preferOpus(sessionDescription.sdp);
+    console.log("Local SDP ",sessionDescription);
     pc.setLocalDescription(sessionDescription);
     console.log('setLocalAndSendMessage sending message' , sessionDescription);
     onPCInitializedCallback(pc,to);

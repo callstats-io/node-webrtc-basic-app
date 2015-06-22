@@ -38,6 +38,7 @@ httpsServer.listen(4430);
 app.use("/", express.static(__dirname + '/app'));
 
 app.get('/', function (req, res) {
+	console.log("Req ",req);
 	res.sendFile('/app/index.html',{root: __dirname})
 });
 
