@@ -222,9 +222,9 @@ function csCallback (err, msg) {
 function dogetScreenShare(callback)
 {
   localVideo = document.querySelector('#localVideo');
-  console.log("In dogetScreenShare ",window.sessionStorage.getItem('getScreenMediaJSExtensionId'));
-  if (window.sessionStorage.getScreenMediaJSExtensionId) {
-    chrome.runtime.sendMessage(window.sessionStorage.getScreenMediaJSExtensionId,
+  console.log("In dogetScreenShare ",window.sessionStorage.getItem('getCSIOScreenMediaExtensionId'));
+  if (window.sessionStorage.getCSIOScreenMediaExtensionId) {
+    chrome.runtime.sendMessage(window.sessionStorage.getCSIOScreenMediaExtensionId,
         {type:'getScreen', id: 1}, null,
         function (data) {
           if (data.sourceId === '') { // user canceled
