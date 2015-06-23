@@ -279,11 +279,12 @@ function dogetFirefoxScreenShare(callback){
   },errorCallback);
 }
 
-function successCallback () {
+function successCallback (arg) {
   console.log("Chrome Extension Installed suceesfully");
+  window.sessionStorage.setItem('getCSIOScreenMediaExtensionId','egdciadhlclicjafgmdlfigkdhipggck');
 }
 
-function failureCallback () {
+function failureCallback (arg) {
   console.log("Chrome Extension Installed failed");
 }
 
