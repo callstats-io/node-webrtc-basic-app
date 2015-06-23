@@ -6,6 +6,8 @@ var isChannelReady = false;
 var calls;
 
 var isScreenSharingOn = false;
+var isFirefox = false;
+var isChrome = false;
 
 var room = 'foo';
 console.log("Room is " + room);
@@ -20,7 +22,7 @@ var constraints = {
 
 var socket = io.connect();
 
-if (room !== '') {
+if (room !== ''){
   console.log('participant', room,myUserId);
   //socket.emit('participant', room,myUserId);
   doGetUserMedia(function(status){
@@ -30,6 +32,15 @@ if (room !== '') {
   });
 }
 
+if(window.navigator.userAgent.match('Chrome')) {
+  isChrome = true;
+  isFirefox = false;
+}
+else if (window.navigator.userAgent.match('Firefox')) {
+  isChrome = false;
+  isFirefox = true;
+}
+
 
 var appConfig = AppConfiguration();
 var appId = appConfig.appId;
@@ -37,7 +48,7 @@ var appSecret = appConfig.appSecret;
 
 var callStats = new callstats($,io,jsSHA);
 
-function csInitCallback (err, msg) {
+function csInitCallback (err, msg){
   console.log("CallStats Initializing Status: err="+err+" msg="+msg);
 }
 
@@ -45,15 +56,17 @@ callStats.initialize(appId, appSecret, myUserId, csInitCallback);
 
 document.getElementById("switchBtn").onclick = switchScreen;
 
-var onPCInitialized = function(pc, receiver) {
+var onPCInitialized = function(pc, receiver){
   console.log("Add new Fabric event to CS");
   callStats.addNewFabric(pc, receiver, callStats.fabricUsage.multiplex, room, csCallback);
 }
 
-function switchScreen() {
+function switchScreen(){
+    console.log("Switch Screen ",isScreenSharingOn);
     if(isScreenSharingOn)
     {
-      removeLocalStream();
+      if(isChrome)
+        removeLocalStream();
       doGetUserMedia(function(status){
         if (status === true) {
           //socket.emit('participant', room,myUserId);
@@ -65,7 +78,8 @@ function switchScreen() {
     }
     else
     {
-      removeLocalStream();
+      if(isChrome)
+        removeLocalStream();
       dogetScreenShare(function(status){
         if (status === true) {
           //console.log("Participant");
@@ -109,8 +123,7 @@ socket.on('log', function (array){
 });
 
 
-function addLocalStream()
-{
+function addLocalStream(){
   for(userId in userPCs)
   {
     var pc = userPCs[userId].getPeerConnection()
@@ -118,8 +131,7 @@ function addLocalStream()
   }
 }
 
-function removeLocalStream()
-{
+function removeLocalStream(){
   for(userId in userPCs)
   {
     var pc = userPCs[userId].getPeerConnection()
@@ -127,8 +139,7 @@ function removeLocalStream()
   }
 }
 
-function endCalls()
-{
+function endCalls(){
   for(var username in userPCs) {
     var chan = userPCs[username];
     var pc = userPCs[username].getPeerConnection();
@@ -138,7 +149,7 @@ function endCalls()
   }
 }
 
-window.addEventListener("beforeunload", function (e) {
+window.addEventListener("beforeunload", function (e){
   endCalls();
 });
 
@@ -150,12 +161,12 @@ function sendMessage(message,to,from){
   socket.emit('signaling', message,to,from);
 }
 
-socket.on('onSignaling', function (message,to,from) {
+socket.on('onSignaling', function (message,to,from){
   console.log("onSignaling called; msg=" + message);
   onSignaling(message,to,from);
 });
 
-onSignaling = function(message,to,from) {
+onSignaling = function(message,to,from){
   var msg = message;
   if ((userPCs[to] === undefined) || (userPCs[to] === null)) {
     if (msg.type === "bye") {
@@ -197,12 +208,15 @@ onSignaling = function(message,to,from) {
 };
 
 //error callback function for getUserMedia
-function errorCallback(error) {
+function errorCallback(error){
   console.log('navigator.getUserMedia error: ', error);
 }
 
-function doGetUserMedia(callback)
-{
+function doGetUserMedia(callback){
+  constraints = {
+  audio: true,
+  video: true
+  };
   localVideo = document.querySelector('#localVideo');
   console.log("Do get User Media");
   getUserMedia(constraints, function(stream) {
@@ -215,12 +229,66 @@ function doGetUserMedia(callback)
         },errorCallback);
 }
 
-function csCallback (err, msg) {
+function csCallback (err, msg){
   console.log("StatsRTC: remote-id ", " status: ", err, " msg: ", msg);
 }
 
-function dogetScreenShare(callback)
-{
+function dogetScreenShare(callback){
+  if(window.navigator.userAgent.match('Chrome')) {
+    console.log("dogetChromeScreenShare");
+    dogetChromeScreenShare(callback);
+  }
+  else if (window.navigator.userAgent.match('Firefox')) {
+    console.log("dogetFirefoxScreenShare");
+    dogetFirefoxScreenShare(callback);
+  }
+
+}
+
+function dogetFirefoxScreenShare(callback){
+  constraints = {
+    video: {
+        mozMediaSource: 'window',
+        mediaSource: 'window',
+        maxWidth: 1920,
+        maxHeight: 1080,
+        minAspectRatio: 1.77
+    }
+  }
+  getUserMedia(constraints, function (stream) {
+    // workaround for https://bugzilla.mozilla.org/show_bug.cgi?id=1045810
+    console.log("firefox sucess callback");
+    localVideo = document.querySelector('#localVideo');
+    var lastTime = stream.currentTime;
+    attachMediaStream(localVideo,stream);
+    localVideo.style.opacity = 1;
+    localStream = stream;
+    var polly = window.setInterval(function () {
+        if (!stream) window.clearInterval(polly);
+        if (stream.currentTime == lastTime) {
+            window.clearInterval(polly);
+            if (stream.onended) {
+                stream.onended();
+            }
+        }
+        lastTime = stream.currentTime;
+    }, 500);
+    if (callback)
+      callback(true);
+
+  },errorCallback);
+}
+
+function successCallback () {
+  console.log("Chrome Extension Installed suceesfully");
+}
+
+function failureCallback () {
+  console.log("Chrome Extension Installed failed");
+}
+
+
+function dogetChromeScreenShare(callback){
   localVideo = document.querySelector('#localVideo');
   console.log("In dogetScreenShare ",window.sessionStorage.getItem('getCSIOScreenMediaExtensionId'));
   if (window.sessionStorage.getCSIOScreenMediaExtensionId) {
@@ -233,7 +301,7 @@ function dogetScreenShare(callback)
             console.log(error.name);
             callback(error);
           } else {
-            var constraints = constraints || {audio: false, video: {
+            var constraints = {audio: false, video: {
               mandatory: {
                   chromeMediaSource: 'desktop',
                   maxWidth: window.screen.width,
@@ -257,6 +325,9 @@ function dogetScreenShare(callback)
           }
         }
     );
+  } else {
+    chrome.webstore.install("https://chrome.google.com/webstore/detail/egdciadhlclicjafgmdlfigkdhipggck",
+            successCallback, failureCallback);
   }
 }
 
