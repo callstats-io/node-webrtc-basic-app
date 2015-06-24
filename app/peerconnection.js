@@ -73,6 +73,11 @@ PeerConnectionChannel = function(to,from,div,localStreamParam,onPCInitialized)
     });
   };
 
+  this.doCallIfActive = function(){
+    if(isCallActive)
+      doCall();
+  }
+
   this.getPeerConnection = function() {
     return pc;
   };
@@ -172,7 +177,7 @@ PeerConnectionChannel = function(to,from,div,localStreamParam,onPCInitialized)
   }
 
   function handleCreateOfferError(event){
-    console.log('createOffer() error: ', e);
+    console.log('createOffer() error: ', event);
   }
 
   function doCall() {
@@ -184,7 +189,7 @@ PeerConnectionChannel = function(to,from,div,localStreamParam,onPCInitialized)
 
   function doAnswer() {
     console.log("do answer");
-    pc.createAnswer(setLocalAndSendMessage, function(error){console.log("create answer error");}, sdpConstraints);
+    pc.createAnswer(setLocalAndSendMessage, function(error){console.log("create answer error " ,error);}, sdpConstraints);
     setRemoteVideo(to,function(status){});
 
   }

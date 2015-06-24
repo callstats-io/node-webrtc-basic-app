@@ -128,6 +128,10 @@ function addLocalStream(){
   {
     var pc = userPCs[userId].getPeerConnection()
     pc.addStream(localStream);
+    if(isFirefox)
+    {
+      userPCs[userId].doCallIfActive();
+    }
   }
 }
 
@@ -135,7 +139,7 @@ function removeLocalStream(){
   for(userId in userPCs)
   {
     var pc = userPCs[userId].getPeerConnection()
-    pc.removeStream(localStream);
+    //pc.removeStream(localStream);
   }
 }
 
@@ -214,8 +218,8 @@ function errorCallback(error){
 
 function doGetUserMedia(callback){
   constraints = {
-  audio: true,
-  video: true
+    audio: true,
+    video: true
   };
   localVideo = document.querySelector('#localVideo');
   console.log("Do get User Media");
@@ -246,7 +250,7 @@ function dogetScreenShare(callback){
 }
 
 function dogetFirefoxScreenShare(callback){
-  constraints = {
+  constraints = {audio: false,
     video: {
         mozMediaSource: 'window',
         mediaSource: 'window',
