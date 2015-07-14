@@ -52,6 +52,10 @@ function csInitCallback (err, msg){
   console.log("CallStats Initializing Status: err="+err+" msg="+msg);
 }
 
+function csReportErrorCallback (err, msg){
+  console.log("CallStats report  error: err="+err+" msg="+msg);
+}
+
 callStats.initialize(appId, appSecret, myUserId, csInitCallback);
 
 document.getElementById("switchBtn").onclick = switchScreen;
@@ -59,6 +63,17 @@ document.getElementById("switchBtn").onclick = switchScreen;
 var onPCInitialized = function(pc, receiver){
   console.log("Add new Fabric event to CS");
   callStats.addNewFabric(pc, receiver, callStats.fabricUsage.multiplex, room, csCallback);
+}
+
+var onPCConnectionError = function(pc,error,funcname) {
+  //callStats.sendFabricEvent(pc, callStats.fabricEvent.fabricSetupFailed, room);
+  if(funcname === "createOffer") {
+    console.log("PC Connection Error in  createOffer",error);
+    callStats.reportError(pc,room,callStats.webRTCFunctions.createOffer,error);
+  } else if (funcname === "createAnswer") {
+    console.log("PC Connection Error createAnswer",error);
+    callStats.reportError(pc,room,callStats.webRTCFunctions.createAnswer,error);
+  }
 }
 
 function switchScreen(){
@@ -107,7 +122,7 @@ socket.on('newUserJoined', function (userId){
   if ((userId !== myUserId) && (isChannelReady === true)) {
     console.log("newUser detected. Invoking call()");
 
-    userPCs[userId] = new PeerConnectionChannel(userId,myUserId,_div,localStream,onPCInitialized);
+    userPCs[userId] = new PeerConnectionChannel(userId,myUserId,_div,localStream,onPCInitialized,onPCConnectionError);
 
     userPCs[userId].call(function(status){
       if (status===true) {
@@ -181,7 +196,7 @@ onSignaling = function(message,to,from){
     } else {
       var _div = 'videos';
       console.log("Call does not exist, create one ",localStream,msg.type);
-      userPCs[to] = new PeerConnectionChannel(to,from,_div,localStream,onPCInitialized);
+      userPCs[to] = new PeerConnectionChannel(to,from,_div,localStream,onPCInitialized,onPCConnectionError);
       userPCs[to].answer(function(status){
         if (status === true) {
           console.log("Call is received now");

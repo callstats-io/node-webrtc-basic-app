@@ -1,5 +1,5 @@
 
-PeerConnectionChannel = function(to,from,div,localStreamParam,onPCInitialized)
+PeerConnectionChannel = function(to,from,div,localStreamParam,onPCInitialized,onPCError)
 {
   this.div = div;
   this.from = from;
@@ -14,6 +14,7 @@ PeerConnectionChannel = function(to,from,div,localStreamParam,onPCInitialized)
   var isCallActive = false;
 
   var onPCInitializedCallback = onPCInitialized;
+  var onPCErrorCallback = onPCError;
 
   var pc_config = {'iceServers': [{'url': 'stun:stun.l.google.com:19302'}]};
 
@@ -178,10 +179,12 @@ PeerConnectionChannel = function(to,from,div,localStreamParam,onPCInitialized)
 
   function handleCreateOfferError(event){
     console.log('createOffer() error: ', event);
+      onPCErrorCallback(pc,event,"createOffer");
   }
 
   function doCall() {
     console.log('Sending offer to peer');
+    onPCInitializedCallback(pc,to);
     pc.createOffer(setLocalAndSendMessage, handleCreateOfferError);
     setRemoteVideo(to,function(status){});
 
@@ -189,7 +192,11 @@ PeerConnectionChannel = function(to,from,div,localStreamParam,onPCInitialized)
 
   function doAnswer() {
     console.log("do answer");
-    pc.createAnswer(setLocalAndSendMessage, function(error){console.log("create answer error " ,error);}, sdpConstraints);
+    onPCInitializedCallback(pc,to);
+    pc.createAnswer(setLocalAndSendMessage, function(error){
+      console.log("create answer error ", error);
+      onPCErrorCallback(pc,error,"createAnswer");
+    }, sdpConstraints);
     setRemoteVideo(to,function(status){});
 
   }
@@ -280,7 +287,6 @@ PeerConnectionChannel = function(to,from,div,localStreamParam,onPCInitialized)
     console.log("Local SDP ",sessionDescription);
     pc.setLocalDescription(sessionDescription);
     console.log('setLocalAndSendMessage sending message' , sessionDescription);
-    onPCInitializedCallback(pc,to);
     sendMessage(sessionDescription,to,from);
   }
 }

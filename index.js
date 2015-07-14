@@ -42,6 +42,7 @@ app.get('/', function (req, res) {
 	res.sendFile('/app/index.html',{root: __dirname})
 });
 
+//var io = require('socket.io').listen(server);
 var io = require('socket.io').listen(httpsServer);
 
 
