@@ -172,7 +172,16 @@ PeerConnectionChannel = function(to,from,div,localStreamParam,onPCInitialized,on
 
   function handleRemoteStreamAdded(event) {
     console.log('Remote stream added.');
-    remoteVideo.src = window.URL.createObjectURL(event.stream);
+
+    if ( window.webkitURL ) {
+      attachMediaStream(remoteVideo,event.stream);
+    } else if ( window.URL && window.URL.createObjectURL ) {
+      remoteVideo.src = window.URL.createObjectURL( event.stream );
+    } else {
+      console.log('Remote stream not added.');
+        //return null;
+    }
+    //remoteVideo.src = window.URL.createObjectURL(event.stream);
     remoteStream = event.stream;
     isCallActive = true;
   }
@@ -208,10 +217,16 @@ PeerConnectionChannel = function(to,from,div,localStreamParam,onPCInitialized,on
   function stop() {
     pc.close();
     pc = null;
-    remoteVideo.style.opacity = 0;
-    remoteVideo.src = "";
-    var _div = document.getElementById(div);
-    _div.removeChild(remoteVideo);
+    if ( window.webkitURL ) {
+      attachMediaStream(remoteVideo, null);
+    }
+    else {
+      remoteVideo.style.opacity = 0;
+      remoteVideo.src = "";
+      var _div = document.getElementById(div);
+      _div.removeChild(remoteVideo);
+    }
+
     isInitiator = false;
     isCallStarted = false;
     isCallActive = false;
