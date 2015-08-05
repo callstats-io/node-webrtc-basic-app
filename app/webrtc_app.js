@@ -139,10 +139,13 @@ socket.on('log', function (array){
 
 
 function addLocalStream(){
+  console.log("addLocalStream: %o",userPCs);
   for(userId in userPCs)
   {
-    var pc = userPCs[userId].getPeerConnection()
+    var pc = userPCs[userId].getPeerConnection();
     pc.addStream(localStream);
+    console.log("Local stream: %o", localStream);
+    //callStats.associateMstWithUserId(pc, userId, "foo", );
     if(isFirefox)
     {
       userPCs[userId].doCallIfActive();
@@ -153,7 +156,7 @@ function addLocalStream(){
 function removeLocalStream(){
   for(userId in userPCs)
   {
-    var pc = userPCs[userId].getPeerConnection()
+    var pc = userPCs[userId].getPeerConnection();
     //pc.removeStream(localStream);
   }
 }

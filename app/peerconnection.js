@@ -181,6 +181,29 @@ PeerConnectionChannel = function(to,from,div,localStreamParam,onPCInitialized,on
       console.log('Remote stream not added.');
         //return null;
     }
+
+    //console.log("Local stream: %o %o", sessionDescription, window.callStats);
+    var ssrcs = [];
+    var validLine = RegExp.prototype.test.bind(/^([a-z])=(.*)/);
+    var reg = /^ssrc:(\d*) ([\w_]*):(.*)/;
+    pc.remoteDescription.sdp.split(/(\r\n|\r|\n)/).filter(validLine).forEach(function (l) {
+        var type = l[0];
+        var content = l.slice(2);
+        if(type === 'a') {
+          if (reg.test(content)) {
+            var match = content.match(reg);
+            if(($.inArray(match[1],ssrcs) === -1)) {
+              ssrcs.push(match[1]);
+            }
+          }
+        }
+      });
+    console.log("Available SSRCS: %o", ssrcs);
+    console.log("Remote ID: %o",to);
+    ssrcs.forEach(function(ssrc) {
+      window.callStats.associateMstWithUserID(pc, to, "foo", ssrc, "camera");
+    });
+
     //remoteVideo.src = window.URL.createObjectURL(event.stream);
     remoteStream = event.stream;
     isCallActive = true;
