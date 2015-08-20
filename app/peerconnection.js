@@ -11,7 +11,9 @@ PeerConnectionChannel = function(to,from,div,localStreamParam,onPCInitialized,on
   var isCallStarted = false;
   var localVideo;
   var remoteVideo;
+  var remotevideoText;
   var isCallActive = false;
+  var ssrcs = [];
 
   var onPCInitializedCallback = onPCInitialized;
   var onPCErrorCallback = onPCError;
@@ -87,6 +89,10 @@ PeerConnectionChannel = function(to,from,div,localStreamParam,onPCInitialized,on
     if(pc)
       pc.close();
   };
+
+  this.getSSRCs = function() {
+    return ssrcs;
+  }
 
 
   this.onChannelMessage = function(message) {
@@ -182,8 +188,6 @@ PeerConnectionChannel = function(to,from,div,localStreamParam,onPCInitialized,on
         //return null;
     }
 
-    //console.log("Local stream: %o %o", sessionDescription, window.callStats);
-    var ssrcs = [];
     var validLine = RegExp.prototype.test.bind(/^([a-z])=(.*)/);
     var reg = /^ssrc:(\d*) ([\w_]*):(.*)/;
     pc.remoteDescription.sdp.split(/(\r\n|\r|\n)/).filter(validLine).forEach(function (l) {
@@ -242,14 +246,22 @@ PeerConnectionChannel = function(to,from,div,localStreamParam,onPCInitialized,on
     pc = null;
     if ( window.webkitURL ) {
       attachMediaStream(remoteVideo, null);
+      console.log("remotevideotext is ",remotevideoText);
+      var _div = document.getElementById(div);
+      console.log("remotevideotext is ",remotevideoText);
+      _div.removeChild(remotevideoText);
+      _div.removeChild(remoteVideo);
     }
     else {
       remoteVideo.style.opacity = 0;
       remoteVideo.src = "";
       var _div = document.getElementById(div);
+      console.log("remotevideotext is ",remotevideoText);
+      _div.removeChild(remotevideoText);
       _div.removeChild(remoteVideo);
-    }
 
+    }
+    console.log("Stop and remove child");
     isInitiator = false;
     isCallStarted = false;
     isCallActive = false;
@@ -310,7 +322,51 @@ PeerConnectionChannel = function(to,from,div,localStreamParam,onPCInitialized,on
         remoteVideo.setAttribute("style","-webkit-transition: opacity 2s; opacity: 1; margin-right: 3px;");
         remoteVideo.setAttribute("height","240px");
         remoteVideo.setAttribute("onclick","mainWindow(this)");
+
+        remotevideoText = document.createElement("div");
+
+        var paraBitrate = document.createElement("p");
+        var bitrate = document.createTextNode("undefined");
+        paraBitrate.setAttribute("id",'bitrate_'+tag);
+        paraBitrate.setAttribute("class",'widgetRow');
+        paraBitrate.appendChild(bitrate);
+
+        var paraQuality = document.createElement("p");
+        var quality = document.createTextNode("Q - undefined");
+        paraQuality.setAttribute("id",'quality_'+tag);
+        paraQuality.setAttribute("class",'widgetRow');
+        paraQuality.appendChild(quality);
+
+        var paraNetwork = document.createElement("p");
+        var network = document.createTextNode("undefined");
+        paraNetwork.setAttribute("id",'network_'+tag);
+        paraNetwork.setAttribute("class",'widgetRow');
+        paraNetwork.appendChild(network);
+
+        remotevideoText.setAttribute("id",'widget-overlay'+tag);
+        remotevideoText.appendChild(paraBitrate);
+        remotevideoText.appendChild(paraQuality);
+        remotevideoText.appendChild(paraNetwork);
+
+
         _div.appendChild(remoteVideo);
+        _div.appendChild(remotevideoText);
+
+        var $vid = $('#video_'+tag);
+        var $msg = $('#widget-overlay'+tag);
+        $vid.css({
+          position: 'relative',
+          zIndex: -1
+        });
+        $msg.css({
+            zIndex: 1,
+            position:'absolute',
+            color: '#000000',
+            background: '#e7e7e7',
+            top:$vid.offset().top + (($vid.height()-10) - ($msg.height())),
+            left:$vid.offset().left+10
+        });
+
         callback(true);
       } else {
         remoteVideo = element;

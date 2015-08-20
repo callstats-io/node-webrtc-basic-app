@@ -1,0 +1,21 @@
+video {
+  position:relative;
+  z-index:-1;
+}
+
+#widget-overlay {
+  position:absolute;
+  color: #000000;
+  z-index:1;
+  background: #e7e7e7;
+}
+
+.widgetRow {
+  margin-top: 0px;
+  margin-bottom: 0px;
+}
+
+#videos {
+  margin-top: 30px;
+  margin-left: 50px;
+}
