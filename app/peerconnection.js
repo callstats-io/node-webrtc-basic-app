@@ -18,7 +18,29 @@ PeerConnectionChannel = function(to,from,div,localStreamParam,onPCInitialized,on
   var onPCInitializedCallback = onPCInitialized;
   var onPCErrorCallback = onPCError;
 
-  var pc_config = {'iceServers': [{'url': 'stun:stun.l.google.com:19302'}]};
+//  var stun_server = {
+  //  urls: 'stun:stun.l.google.com:19302'
+ // };
+
+  var turn_server = {
+    url: 'turn:turn-server-1.dialogue.io:3478',
+    username: 'test',
+    credential: '1234',
+    realm: 'reTurn'
+  };
+
+
+  var turn_server_tls = {
+    url: 'turn:turn-server-1.dialogue.io:5349',
+    username: 'test',
+    credential: '1234',
+    realm: 'reTurn'
+  };
+
+  var iceServers = [turn_server,turn_server_tls];
+
+  var pc_config = {'iceTransports': 'all','iceServers': iceServers};
+
 
   var pc_constraints = {'optional': [{'DtlsSrtpKeyAgreement': true}]};
 
