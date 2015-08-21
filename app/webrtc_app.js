@@ -318,10 +318,22 @@ function errorCallback(error){
 }
 
 function doGetUserMedia(callback){
-  constraints = {
-    audio: true,
-    video: true
-  };
+  if(isChrome) {
+    constraints = {
+      audio: { optional: [{ echoCancellation: false, googTypingNoiseDetection: false,
+        googHighpassFilter: false,
+        googNoiseSuppression: false,
+        googAutoGainControl: false,
+        googEchoCancellation: false }] },
+      video: true
+    };
+  } else {
+    constraints = {
+      audio: true,
+      video: true
+    };
+  }
+
   localVideo = document.querySelector('#localVideo');
   console.log("Do get User Media");
   getUserMedia(constraints, function(stream) {

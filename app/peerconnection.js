@@ -54,6 +54,22 @@ PeerConnectionChannel = function(to,from,div,localStreamParam,onPCInitialized,on
     video: true
   };
 
+  if(window.navigator.userAgent.match('Chrome')) {
+    constraints = {
+      audio: { optional: [{ echoCancellation: false, googTypingNoiseDetection: false,
+        googHighpassFilter: false,
+        googNoiseSuppression: false,
+        googAutoGainControl: false,
+        googEchoCancellation: false }] },
+      video: true
+    };
+  } else {
+    constraints = {
+      audio: true,
+      video: true
+    };
+  }
+
   if (localStreamParam !== null) {
     //console.log("Stream added previously ",localStreamParam,localStream);
     localStream = localStreamParam;
@@ -227,7 +243,7 @@ PeerConnectionChannel = function(to,from,div,localStreamParam,onPCInitialized,on
     console.log("Available SSRCS: %o", ssrcs);
     console.log("Remote ID: %o",to);
     ssrcs.forEach(function(ssrc) {
-      window.callStats.associateMstWithUserID(pc, to, "foo", ssrc, "camera");
+      window.callStats.associateMstWithUserID(pc, to, "foo", ssrc, "camera","video_"+to);
     });
 
     //remoteVideo.src = window.URL.createObjectURL(event.stream);
