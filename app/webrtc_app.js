@@ -79,6 +79,7 @@ function getMinQuality (quality) {
   return retQualityString;
 }
 
+
 function statsCallback (stats){
   console.log("processed stats ",stats);
   var $bitrate = $('#bitrate');
@@ -104,25 +105,11 @@ function statsCallback (stats){
     for( i = 0; i < ssrcs.length; i++) {
       ssrc = ssrcs[i];
       if(stats.streams[ssrc]) {
-        if (stats.streams[ssrc].inbound) {
-          for(reportType in stats.streams[ssrc].inbound) {
-            if(stats.streams[ssrc].inbound[reportType].intBRKbps) {
-              bitrateForSsrc = bitrateForSsrc + stats.streams[ssrc].inbound[reportType].intBRKbps;
-            }
-            if(stats.streams[ssrc].inbound[reportType].mark) {
-              quality.push(stats.streams[ssrc].inbound[reportType].mark);
-            }
-          }
+        if(stats.streams[ssrc].bitrate) {
+          bitrateForSsrc = bitrateForSsrc + stats.streams[ssrc].bitrate;
         }
-        if (stats.streams[ssrc].outbound) {
-          for(reportType in stats.streams[ssrc].outbound) {
-            if(stats.streams[ssrc].outbound[reportType].intBRKbps) {
-              bitrateForSsrc = bitrateForSsrc + stats.streams[ssrc].outbound[reportType].intBRKbps;
-            }
-            if(stats.streams[ssrc].outbound[reportType].mark) {
-              quality.push(stats.streams[ssrc].outbound[reportType].mark);
-            }
-          }
+        if(stats.streams[ssrc].quality) {
+          quality.push(stats.streams[ssrc].quality);
         }
       }
     }
@@ -136,8 +123,6 @@ function statsCallback (stats){
     console.log("Userid and ssrcs ",userId,ssrcs);
   }
 }
-
-
 
 
 function csReportErrorCallback (err, msg){
