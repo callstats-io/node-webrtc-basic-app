@@ -22,15 +22,6 @@ var constraints = {
 
 var socket = io.connect();
 
-if (room !== ''){
-  console.log('participant', room,myUserId);
-  //socket.emit('participant', room,myUserId);
-  doGetUserMedia(function(status){
-    if (status === true) {
-      socket.emit('participant', room,myUserId);
-    }
-  });
-}
 
 if(window.navigator.userAgent.match('Chrome')) {
   isChrome = true;
@@ -39,6 +30,17 @@ if(window.navigator.userAgent.match('Chrome')) {
 else if (window.navigator.userAgent.match('Firefox')) {
   isChrome = false;
   isFirefox = true;
+}
+
+
+if (room !== ''){
+  console.log('participant', room,myUserId);
+  //socket.emit('participant', room,myUserId);
+  doGetUserMedia(function(status){
+    if (status === true) {
+      socket.emit('participant', room,myUserId);
+    }
+  });
 }
 
 var appConfig = AppConfiguration();
@@ -161,7 +163,10 @@ function switchScreen(){
     }
     if(isScreenSharingOn)
     {
-      callStats.sendFabricEvent(pc, callStats.fabricEvent.videoResume, room);
+      if (pc) {
+        callStats.sendFabricEvent(pc, callStats.fabricEvent.videoResume, room);
+      }
+
       if(isChrome) {
         removeLocalStream();
       }
@@ -176,7 +181,9 @@ function switchScreen(){
     }
     else
     {
-      callStats.sendFabricEvent(pc, callStats.fabricEvent.videoPause, room);
+      if (pc) {
+        callStats.sendFabricEvent(pc, callStats.fabricEvent.videoPause, room);
+      }
       if(isChrome){
         removeLocalStream();
       }
@@ -319,12 +326,17 @@ function errorCallback(error){
 
 function doGetUserMedia(callback){
   if(isChrome) {
+
     constraints = {
-      audio: { optional: [{ echoCancellation: false, googTypingNoiseDetection: false,
-        googHighpassFilter: false,
-        googNoiseSuppression: false,
-        googAutoGainControl: false,
-        googEchoCancellation: false }] },
+      audio: {
+        mandatory: {
+        googEchoCancellation: false, // disabling audio processing
+        googAutoGainControl: true,
+        googNoiseSuppression: true,
+        googHighpassFilter: true,
+        googTypingNoiseDetection: true
+        },
+        optional: [{ echoCancellation: false}] },
       video: true
     };
   } else {
@@ -335,7 +347,7 @@ function doGetUserMedia(callback){
   }
 
   localVideo = document.querySelector('#localVideo');
-  console.log("Do get User Media");
+  console.log("Do get User Media ",constraints);
   getUserMedia(constraints, function(stream) {
         console.log("User has granted access to local media.");
         attachMediaStream(localVideo,stream);

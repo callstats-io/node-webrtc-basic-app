@@ -56,11 +56,15 @@ PeerConnectionChannel = function(to,from,div,localStreamParam,onPCInitialized,on
 
   if(window.navigator.userAgent.match('Chrome')) {
     constraints = {
-      audio: { optional: [{ echoCancellation: false, googTypingNoiseDetection: false,
-        googHighpassFilter: false,
-        googNoiseSuppression: false,
-        googAutoGainControl: false,
-        googEchoCancellation: false }] },
+      audio: {
+        mandatory: {
+        googEchoCancellation: false, // disabling audio processing
+        googAutoGainControl: true,
+        googNoiseSuppression: true,
+        googHighpassFilter: true,
+        googTypingNoiseDetection: true
+        },
+        optional: [{ echoCancellation: false}] },
       video: true
     };
   } else {
