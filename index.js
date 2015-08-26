@@ -42,8 +42,8 @@ app.get('/', function (req, res) {
 	res.sendFile('/app/index.html',{root: __dirname})
 });
 
-//var io = require('socket.io').listen(server);
-var io = require('socket.io').listen(httpsServer);
+var io = require('socket.io').listen(server);
+//var io = require('socket.io').listen(httpsServer);
 
 
 console.log("IO created");
@@ -74,27 +74,40 @@ io.sockets.on('connection', function (socket){
   socket.on('participant', function (room,userId) {
     console.log('Got participant', room,userId);
     socket.username = userId;
+    socket.roomId = room;
     console.log(userId +' has connected with socketid '+socket.id);
     ids[userId] = socket.id;
     usernames.push(userId);
 
     log('Room ' + room + ' has ' + numClients + ' client(s)');
     log('Request to create or join room ' + room);
-
+    socket.join(room);
     if (numClients === 0){
-      socket.join(room);
       socket.emit('created', room);
-    } else if (numClients >= 1) {
-      //io.sockets.in(room).emit('newUserJoin', userId);
-      socket.join(room);
-      //socket.emit('newUserJoined', userId);
-    }
+     } //else if (numClients >= 1) {
+    //   //io.sockets.in(room).emit('newUserJoin', userId);
+    //   socket.join(room);
+    //   //socket.emit('newUserJoined', userId);
+    // }
 
     io.sockets.emit('newUserJoined', userId);
     numClients++;
     socket.emit('emit(): client ' + socket.id + ' joined room ' + room);
     socket.broadcast.emit('broadcast(): client ' + socket.id + ' joined room ' + room);
 
+  });
+
+  socket.on('disconnect', function () {
+    var room = socket.roomId;
+    console.log('User disconnected ',socket.username,room);
+    for( var key in usernames ) {
+      if (usernames[key] === socket.username) {
+        usernames.splice(key,1);
+        socket.leave(room);
+      }
+    }
+    delete ids[socket.id];
+    io.sockets.emit('userlist', encodeURIComponent(usernames + ""));
   });
 
 });
