@@ -140,13 +140,16 @@ var onPCInitialized = function(pc, receiver){
 }
 
 var onPCConnectionError = function(pc,error,funcname) {
-  callStats.sendFabricEvent(pc, callStats.fabricEvent.fabricSetupFailed, room);
+  //callStats.sendFabricEvent(pc, callStats.fabricEvent.fabricSetupFailed, room);
   if(funcname === "createOffer") {
     console.log("PC Connection Error in  createOffer",error);
     callStats.reportError(pc,room,callStats.webRTCFunctions.createOffer,error);
   } else if (funcname === "createAnswer") {
     console.log("PC Connection Error createAnswer",error);
     callStats.reportError(pc,room,callStats.webRTCFunctions.createAnswer,error);
+  } else if (funcname === "setRemoteDescription") {
+    console.log("PC Connection Error setRemoteDescription %o", error);
+    callStats.reportError(pc,room,callStats.webRTCFunctions.setRemoteDescription,error);
   }
 
   //callStats.sendFabricEvent(pc,callStats.fabricEvent.fabricSetupFailed,room);
@@ -343,7 +346,7 @@ function doGetUserMedia(callback){
   } else {
     constraints = {
       audio: true,
-      video: {width: 4024, height: 4024}
+      video: true //{width: 4024, height: 4024}
     };
   }
 

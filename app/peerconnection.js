@@ -150,8 +150,15 @@ PeerConnectionChannel = function(to,from,div,localStreamParam,onPCInitialized,on
         maybeStart();
       }
       console.log("Offer sdp ",message);
-      pc.setRemoteDescription(new RTCSessionDescription(message));
-      doAnswer();
+      pc.setRemoteDescription(new RTCSessionDescription(message), function() {
+        // successful callback
+        console.log("setRemoteDescription successful callback");
+        doAnswer();
+      }, function(error) {
+        // error callback
+        console.log("setRemoteDescription error callback: %o", error);
+        onPCErrorCallback(pc,error,"setRemoteDescription");
+      });
     } else if (message.type === 'answer' && isCallStarted) {
       console.log("Answer sdp ",message);
       pc.setRemoteDescription(new RTCSessionDescription(message));
@@ -190,6 +197,7 @@ PeerConnectionChannel = function(to,from,div,localStreamParam,onPCInitialized,on
       pc.onaddstream = handleRemoteStreamAdded;
       pc.onremovestream = handleRemoteStreamRemoved;
       pc.onnegotiationneeded = handleOnNegotiationNeeded;
+      onPCInitializedCallback(pc, to);
       console.log('Created RTCPeerConnnection');
     } catch (e) {
       console.log('Failed to create PeerConnection, exception: ' + e.message);
@@ -262,7 +270,6 @@ PeerConnectionChannel = function(to,from,div,localStreamParam,onPCInitialized,on
 
   function doCall() {
     console.log('Sending offer to peer');
-    onPCInitializedCallback(pc,to);
     pc.createOffer(setLocalAndSendMessage, handleCreateOfferError);
     setRemoteVideo(to,function(status){});
 
@@ -270,7 +277,6 @@ PeerConnectionChannel = function(to,from,div,localStreamParam,onPCInitialized,on
 
   function doAnswer() {
     console.log("do answer");
-    onPCInitializedCallback(pc,to);
     pc.createAnswer(setLocalAndSendMessage, function(error){
       console.log("create answer error ", error);
       onPCErrorCallback(pc,error,"createAnswer");
