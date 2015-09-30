@@ -22,16 +22,6 @@ var constraints = {
 
 var socket = io.connect();
 
-if (room !== '') {
-  console.log('participant', room, myUserId);
-  //socket.emit('participant', room,myUserId);
-  doGetUserMedia(function(status){
-    if (status === true) {
-      socket.emit('participant', room,myUserId);
-    }
-  });
-}
-
 if(window.navigator.userAgent.match('Chrome')) {
   isChrome = true;
   isFirefox = false;
@@ -41,6 +31,16 @@ else if (window.navigator.userAgent.match('Firefox')) {
   isFirefox = true;
 }
 
+
+if (room !== ''){
+  console.log('participant', room,myUserId);
+  //socket.emit('participant', room,myUserId);
+  doGetUserMedia(function(status){
+    if (status === true) {
+      socket.emit('participant', room,myUserId);
+    }
+  });
+}
 
 var appConfig = AppConfiguration();
 var appId = appConfig.appId;
@@ -52,21 +52,94 @@ function csInitCallback (err, msg){
   console.log("CallStats Initializing Status: err="+err+" msg="+msg);
 }
 
-function csReportErrorCallback (err, msg){
-  console.log("CallStats report  error: err="+err+" msg="+msg);
+function getMinQuality (quality) {
+  var i;
+  var retQuality = 0;
+  var retQualityString;
+  for (i = 0; i < quality.length; i++) {
+    var tempQuality;
+    if (quality[i] === "excellent") {
+      tempQuality = 3;
+    } else if (quality[i] === "fair") {
+      tempQuality = 2;
+    } else if (quality[i] === "bad") {
+      tempQuality = 1;
+    }
+    if (retQuality === 0 || tempQuality < retQuality) {
+      retQuality = tempQuality;
+    }
+  }
+
+  if (retQuality === 1) {
+    retQualityString = "Red";
+  } else if (retQuality === 2) {
+    retQualityString = "Yellow";
+  } else if (retQuality === 3) {
+    retQualityString = "Green";
+  }
+  return retQualityString;
 }
 
-callStats.initialize(appId, appSecret, myUserId, csInitCallback);
+
+function statsCallback (stats){
+  console.log("processed stats ",stats);
+  var $bitrate = $('#bitrate');
+  var $network = $('#network');
+
+  $network.text(stats.connectionState+"/"+stats.fabricState);
+  var userId;
+  var bitrateForSsrc = 0;
+  var quality = [];
+  for(userId in userPCs)
+  {
+    bitrateForSsrc = 0;
+    var $bitratetemp = $('#bitrate_'+userId);
+    var $networktemp = $('#network_'+userId);
+    var $qualitytemp = $('#quality_'+userId);
+    var ssrcs = userPCs[userId].getSSRCs();
+    $networktemp.text(stats.connectionState+"/"+stats.fabricState);
+    var ssrc;
+    var reportType;
+    var i;
+    quality = [];
+    for( i = 0; i < ssrcs.length; i++) {
+      ssrc = ssrcs[i];
+      if(stats.streams[ssrc]) {
+        if(stats.streams[ssrc].bitrate) {
+          bitrateForSsrc = bitrateForSsrc + stats.streams[ssrc].bitrate;
+        }
+        if(stats.streams[ssrc].quality) {
+          quality.push(stats.streams[ssrc].quality);
+        }
+      }
+    }
+    if(bitrateForSsrc > 0) {
+      bitrateForSsrc = bitrateForSsrc.toFixed(2);
+      $bitratetemp.text(bitrateForSsrc+"Kbps");
+      var processedQuality = getMinQuality(quality);
+      $qualitytemp.text("Q - "+processedQuality);
+      console.log("Quality is ",quality);
+    }
+    console.log("Userid and ssrcs ",userId,ssrcs);
+  }
+}
+
+
+function csReportErrorCallback (err, msg){
+  console.log("CallStats error: err="+err+" msg="+msg);
+}
+
+callStats.initialize(appId, appSecret, myUserId, csInitCallback,statsCallback);
 
 document.getElementById("switchBtn").onclick = switchScreen;
 
 var onPCInitialized = function(pc, receiver){
-  console.log("Add new Fabric event to CS");
+  console.log("Add new Fabric event to CS ",pc);
   callStats.addNewFabric(pc, receiver, callStats.fabricUsage.multiplex, room, csCallback);
 }
 
 var onPCConnectionError = function(pc,error,funcname) {
-  //callStats.sendFabricEvent(pc, callStats.fabricEvent.fabricSetupFailed, room);
+  callStats.sendFabricEvent(pc, callStats.fabricEvent.fabricSetupFailed, room);
   if(funcname === "createOffer") {
     console.log("PC Connection Error in  createOffer %o", error);
     callStats.reportError(pc,room,callStats.webRTCFunctions.createOffer,error);
@@ -74,11 +147,24 @@ var onPCConnectionError = function(pc,error,funcname) {
     console.log("PC Connection Error createAnswer %o", error);
     callStats.reportError(pc,room,callStats.webRTCFunctions.createAnswer,error);
   }
+
+  //callStats.sendFabricEvent(pc,callStats.fabricEvent.fabricSetupFailed,room);
 }
 
 function switchScreen(){
-    console.log("Switch Screen %o", isScreenSharingOn);
-    if(isScreenSharingOn) {
+    console.log("Switch Screen ",isScreenSharingOn);
+    var pc;
+    for(userId in userPCs)
+    {
+      pc = userPCs[userId].getPeerConnection();
+      break;
+    }
+    if(isScreenSharingOn)
+    {
+      if (pc) {
+        callStats.sendFabricEvent(pc, callStats.fabricEvent.videoResume, room);
+      }
+
       if(isChrome) {
         removeLocalStream();
       }
@@ -89,8 +175,13 @@ function switchScreen(){
           addLocalStream();
         }
       });
-    } else {
-      if(isChrome) {
+    }
+    else
+    {
+      if (pc) {
+        callStats.sendFabricEvent(pc, callStats.fabricEvent.videoPause, room);
+      }
+      if(isChrome){
         removeLocalStream();
       }
       dogetScreenShare(function(status){
@@ -114,7 +205,6 @@ socket.on('newUserJoined', function (userId){
   var _div = 'videos';
   if ((userId !== myUserId) && (isChannelReady === true)) {
     console.log("newUser detected. Invoking call()");
-
     userPCs[userId] = new PeerConnectionChannel(userId,myUserId,_div,localStream,onPCInitialized,onPCConnectionError);
     userPCs[userId].call(function(status){
       if (status===true) {
@@ -157,6 +247,8 @@ function endCalls(){
     sendMessage({type: 'bye'},chan.to,chan.from);
     callStats.sendFabricEvent(pc,callStats.fabricEvent.fabricTerminated,room);
     pc.close();
+    console.log("disconnect is ",myUserId,room);
+    socket.emit('disconnect', myUserId,room);
   }
 }
 
@@ -184,7 +276,7 @@ onSignaling = function(message,to,from){
       console.log("bye message", message);
       var pc = userPCs[to].getPeerConnection();
       callStats.sendFabricEvent(pc,callStats.fabricEvent.fabricTerminated,room);
-      userPCs[to]=null;
+      //userPCs[to]=null;
     } else {
       var _div = 'videos';
       console.log("Call does not exist, create one ",localStream,msg.type);
@@ -222,34 +314,33 @@ onSignaling = function(message,to,from){
 //error callback function for getUserMedia
 function errorCallback(error){
   console.log('navigator.getUserMedia error: ', error);
-  callStats.reportError(null,room,callStats.webRTCFunctions.getUserMedia,error);
-  socket.emit('disconnect', myUserId, room);
+  callStats.reportError(null,room,callStats.webRTCFunctions.getUserMedia,"dom_error");
 }
 
 function doGetUserMedia(callback){
-  constraints = {
-    audio: true,
-    //video: true
-  };
-  /*constraints = {
-    audio: {
-      mandatory: {
-        googEchoCancellation: true, // disabling audio processing
+  if(isChrome) {
+    constraints = {
+      audio: {
+        mandatory: {
+        googEchoCancellation: false, // disabling audio processing
         googAutoGainControl: true,
         googNoiseSuppression: true,
         googHighpassFilter: true,
         googTypingNoiseDetection: true
         },
-      optional: [{ echoCancellation: true}]
-    },
-    video: {mandatory: { minFrameRate: 50000}, optional: []}
-  };*/
+        optional: [{ echoCancellation: false}] },
+      video: {mandatory: { /*minFrameRate: 180*/}, optional: []}
+    };
+  } else {
+    constraints = {
+      audio: true,
+      video: {width: 4024, height: 4024}
+    };
+  }
+
   localVideo = document.querySelector('#localVideo');
-  console.log("Do get User Media");
-  var p = navigator.mediaDevices.getUserMedia(constraints);
-  //console.log("getUserMedia: %o", requestUserMedia);
-  //var p = requestUserMedia(constraints);
-  p.then(function(stream) {
+  console.log("Do get User Media ",constraints);
+  getUserMedia(constraints, function(stream) {
         console.log("User has granted access to local media.");
         //attachMediaStream(localVideo,stream);
         localVideo.srcObject = stream;

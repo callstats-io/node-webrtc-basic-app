@@ -1,0 +1,22 @@
+{
+  "name": "node-webrtc-basic-app",
+  "main": "index.js",
+  "version": "0.0.1",
+  "homepage": "https://github.com/callstats-io/node-webrtc-basic-app",
+  "authors": [
+    "Marcin Nagy <marcin@callstats.io>"
+  ],
+  "description": "",
+  "moduleType": [
+    "amd",
+    "es6",
+    "globals",
+    "node",
+    "yui"
+  ],
+  "license": "MIT",
+  "private": true,
+  "dependencies": {
+    "ortc-adapter": "~0.1.4"
+  }
+}

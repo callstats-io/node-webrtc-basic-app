@@ -1,0 +1,50 @@
+{
+  "name": "ortc-adapter",
+  "version": "0.1.4",
+  "description": "ORTC to WebRTC Adapter",
+  "license": "BSD",
+  "repository": {
+    "type": "git",
+    "url": "http://github.com/twilio/ortc-adapter.git"
+  },
+  "authors": [
+    "markandrusroberts@gmail.com"
+  ],
+  "main": "dist/ortc-adapter.min.js",
+  "keywords": [
+    "ORTC",
+    "WebRTC"
+  ],
+  "moduleType": [
+    "amd",
+    "globals",
+    "node"
+  ],
+  "ignore": [
+    "**/.*",
+    "*.json",
+    "*.md",
+    "bower_components",
+    "css",
+    "dist/docs",
+    "index.html",
+    "js",
+    "lib",
+    "Makefile",
+    "node_modules",
+    "src",
+    "test",
+    "tests"
+  ],
+  "homepage": "https://github.com/twilio/ortc-adapter",
+  "_release": "0.1.4",
+  "_resolution": {
+    "type": "version",
+    "tag": "0.1.4",
+    "commit": "a5dd07e9d6333883304724ef207b20fc5181c966"
+  },
+  "_source": "git://github.com/twilio/ortc-adapter.git",
+  "_target": "~0.1.4",
+  "_originalSource": "ortc-adapter",
+  "_direct": true
+}
