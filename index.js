@@ -42,8 +42,8 @@ app.get('/', function (req, res) {
 	res.sendFile('/app/index.html',{root: __dirname})
 });
 
-//var io = require('socket.io').listen(server);
-var io = require('socket.io').listen(httpsServer);
+var io = require('socket.io').listen(server);
+//var io = require('socket.io').listen(httpsServer);
 
 
 console.log("IO created");
@@ -60,7 +60,11 @@ io.sockets.on('connection', function (socket){
   }
 
   socket.on('signaling', function (message,to,from) {
-    log('Got message:', message);
+    console.log('Got message:', message);
+    // make an ICE failure
+    /*if(message.type === "candidate") {
+      return;
+    }*/
     // for a real app, would be room only (not broadcast)
     for(var i=0; i< io.sockets.sockets.length; i++)
     {

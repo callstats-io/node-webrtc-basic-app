@@ -16,7 +16,7 @@ PeerConnectionChannel = function(to,from,div,localStreamParam,onPCInitialized,on
   var onPCInitializedCallback = onPCInitialized;
   var onPCErrorCallback = onPCError;
 
-  var pc_config = {'iceServers': [{'url': 'stun:stun.l.google.com:19302'}]};
+  var pc_config = {"gatherPolicy": "all",'iceServers': [{'urls': 'stun:stun.l.google.com:19302'}], "iceTransportPolicy": "all"};
 
   var pc_constraints = {'optional': [{'DtlsSrtpKeyAgreement': true}]};
 
@@ -101,12 +101,19 @@ PeerConnectionChannel = function(to,from,div,localStreamParam,onPCInitialized,on
       if (!isInitiator && !isCallStarted) {
         maybeStart();
       }
-      console.log("Offer sdp ",message);
-      pc.setRemoteDescription(new RTCSessionDescription(message));
-      doAnswer();
+      pc.setRemoteDescription(new RTCSessionDescription(message), function() {
+        doAnswer();
+      }, function(error) {
+        errorCallback(error);
+      });
+
     } else if (message.type === 'answer' && isCallStarted) {
-      console.log("Answer sdp ",message);
-      pc.setRemoteDescription(new RTCSessionDescription(message));
+      console.log("Got answer: %o", message);
+      pc.setRemoteDescription(new RTCSessionDescription(message), function() {
+        console.log("Set remote description successful");
+      }, function(error) {
+        errorCallback(error);
+      });
     } else if (message.type === 'candidate' && isCallStarted) {
       var candidate = new RTCIceCandidate({
         sdpMLineIndex: message.label,
@@ -137,17 +144,24 @@ PeerConnectionChannel = function(to,from,div,localStreamParam,onPCInitialized,on
   function createPeerConnection() {
     try {
       pc = new RTCPeerConnection(pc_config,{optional: [{RtpDataChannels: true},{DtlsSrtpKeyAgreement: true}]});
+      console.log("pc created");
       pc.addStream(localStream);
+      console.log("Stream added");
       pc.onicecandidate = handleIceCandidate;
       pc.onaddstream = handleRemoteStreamAdded;
       pc.onremovestream = handleRemoteStreamRemoved;
       pc.onnegotiationneeded = handleOnNegotiationNeeded;
+      pc.oniceconnectionstatechange = handleOnIceConnectionStateChange;
       console.log('Created RTCPeerConnnection');
     } catch (e) {
       console.log('Failed to create PeerConnection, exception: ' + e.message);
       alert('Cannot create RTCPeerConnection object.');
       return;
     }
+  }
+
+  function handleOnIceConnectionStateChange(event) {
+    console.log("handleOnIceConnectionStateChange: %o", event);
   }
 
   function handleOnNegotiationNeeded(event) {
@@ -174,8 +188,14 @@ PeerConnectionChannel = function(to,from,div,localStreamParam,onPCInitialized,on
     console.log('Remote stream added.');
 
     if ( window.webkitURL ) {
-      attachMediaStream(remoteVideo,event.stream);
+      console.log("Calling attachMediaStream %o", event.stream);
+      console.log("Remote tracks: %o", event.stream.getTracks());
+      console.log("Local stream: %o", localStream);
+      console.log("Remote video: ", remoteVideo);
+      attachMediaStream(remoteVideo, event.stream);
+      //attachMediaStream(remoteVideo, localStream);
     } else if ( window.URL && window.URL.createObjectURL ) {
+      console.log("Calling remoteVideo.src");
       remoteVideo.src = window.URL.createObjectURL( event.stream );
     } else {
       console.log('Remote stream not added.');
@@ -201,7 +221,9 @@ PeerConnectionChannel = function(to,from,div,localStreamParam,onPCInitialized,on
     console.log("Available SSRCS: %o", ssrcs);
     console.log("Remote ID: %o",to);
     ssrcs.forEach(function(ssrc) {
-      window.callStats.associateMstWithUserID(pc, to, "foo", ssrc, "camera");
+      var remoteID = Math.floor(Math.random()*10000).toString();
+      console.log("Using random user ID %o for SSRC: %o", remoteID, ssrc);
+      window.callStats.associateMstWithUserID(pc, remoteID, "foo", ssrc, "camera");
     });
 
     //remoteVideo.src = window.URL.createObjectURL(event.stream);
@@ -217,7 +239,12 @@ PeerConnectionChannel = function(to,from,div,localStreamParam,onPCInitialized,on
   function doCall() {
     console.log('Sending offer to peer');
     onPCInitializedCallback(pc,to);
-    pc.createOffer(setLocalAndSendMessage, handleCreateOfferError);
+    pc.createOffer(setLocalAndSendMessage, handleCreateOfferError); //, { 'mandatory': { 'OfferToReceiveVideo': 1}});
+    /*var p = pc.createOffer({ 'mandatory': { 'OfferToReceiveVideo': 1}});
+    p.then(function(offer) {
+      setLocalAndSendMessage(offer);
+    });
+    p.catch(handleCreateOfferError);*/
     setRemoteVideo(to,function(status){});
 
   }
@@ -225,12 +252,12 @@ PeerConnectionChannel = function(to,from,div,localStreamParam,onPCInitialized,on
   function doAnswer() {
     console.log("do answer");
     onPCInitializedCallback(pc,to);
+    setRemoteVideo(to,function(status){});
+    setRemoteVideo(from,function(status){});
     pc.createAnswer(setLocalAndSendMessage, function(error){
       console.log("create answer error ", error);
       onPCErrorCallback(pc,error,"createAnswer");
     }, sdpConstraints);
-    setRemoteVideo(to,function(status){});
-
   }
 
   function handleRemoteStreamRemoved(event) {
@@ -242,6 +269,7 @@ PeerConnectionChannel = function(to,from,div,localStreamParam,onPCInitialized,on
     pc = null;
     if ( window.webkitURL ) {
       attachMediaStream(remoteVideo, null);
+
     }
     else {
       remoteVideo.style.opacity = 0;
@@ -258,6 +286,10 @@ PeerConnectionChannel = function(to,from,div,localStreamParam,onPCInitialized,on
   //error callback function for getUserMedia
   function errorCallback(error) {
     console.log('navigator.getUserMedia error: ', error);
+  }
+
+  function attachMediaStream(tag, stream) {
+    tag.srcObject = stream;
   }
 
   function doGetUserMedia(callback)
@@ -322,9 +354,15 @@ PeerConnectionChannel = function(to,from,div,localStreamParam,onPCInitialized,on
   function setLocalAndSendMessage(sessionDescription) {
     // Set Opus as the preferred codec in SDP if Opus is present.
     //sessionDescription.sdp = preferOpus(sessionDescription.sdp);
-    console.log("Local SDP ",sessionDescription);
-    pc.setLocalDescription(sessionDescription);
-    console.log('setLocalAndSendMessage sending message' , sessionDescription);
-    sendMessage(sessionDescription,to,from);
+    if(sessionDescription.type === "answer") {
+      console.log("Created answer: %o", sessionDescription);
+    }
+    pc.setLocalDescription(sessionDescription, function() {
+      console.log('setLocalAndSendMessage sending message' , sessionDescription);
+      sendMessage(sessionDescription,to,from);
+      pc.addStream(localStream);
+    }, function(err) {
+      console.log("Error callback inside setLocalDescription: %o", err);
+    });
   }
 }

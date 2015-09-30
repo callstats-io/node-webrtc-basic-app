@@ -12,7 +12,7 @@ var isChrome = false;
 var room = 'foo';
 console.log("Room is " + room);
 
-var temp = Math.floor(Math.random()*10000);
+var temp = Math.floor(Math.random() * 10000);
 var myUserId = temp.toString();
 
 var constraints = {
@@ -22,8 +22,8 @@ var constraints = {
 
 var socket = io.connect();
 
-if (room !== ''){
-  console.log('participant', room,myUserId);
+if (room !== '') {
+  console.log('participant', room, myUserId);
   //socket.emit('participant', room,myUserId);
   doGetUserMedia(function(status){
     if (status === true) {
@@ -68,66 +68,59 @@ var onPCInitialized = function(pc, receiver){
 var onPCConnectionError = function(pc,error,funcname) {
   //callStats.sendFabricEvent(pc, callStats.fabricEvent.fabricSetupFailed, room);
   if(funcname === "createOffer") {
-    console.log("PC Connection Error in  createOffer",error);
+    console.log("PC Connection Error in  createOffer %o", error);
     callStats.reportError(pc,room,callStats.webRTCFunctions.createOffer,error);
   } else if (funcname === "createAnswer") {
-    console.log("PC Connection Error createAnswer",error);
+    console.log("PC Connection Error createAnswer %o", error);
     callStats.reportError(pc,room,callStats.webRTCFunctions.createAnswer,error);
   }
 }
 
 function switchScreen(){
-    console.log("Switch Screen ",isScreenSharingOn);
-    if(isScreenSharingOn)
-    {
-      if(isChrome)
+    console.log("Switch Screen %o", isScreenSharingOn);
+    if(isScreenSharingOn) {
+      if(isChrome) {
         removeLocalStream();
+      }
       doGetUserMedia(function(status){
         if (status === true) {
           //socket.emit('participant', room,myUserId);
           isScreenSharingOn = false;
           addLocalStream();
         }
-
       });
-    }
-    else
-    {
-      if(isChrome)
+    } else {
+      if(isChrome) {
         removeLocalStream();
+      }
       dogetScreenShare(function(status){
         if (status === true) {
-          //console.log("Participant");
-          //socket.emit('participant', room,myUserId);
           isScreenSharingOn = true;
           addLocalStream();
         }
-
       });
     }
-
 }
 
 socket.on('created', function (room){
   console.log('Created room ' + room);
-  //isInitiator = true;
 });
 
 socket.on('newUserJoined', function (userId){
   console.log('This peer has joined ' + userId);
-  //isInitiator = true;
-  if(userId !== myUserId)
+  if(userId !== myUserId) {
     isChannelReady = true;
+  }
   var _div = 'videos';
   if ((userId !== myUserId) && (isChannelReady === true)) {
     console.log("newUser detected. Invoking call()");
 
     userPCs[userId] = new PeerConnectionChannel(userId,myUserId,_div,localStream,onPCInitialized,onPCConnectionError);
-
     userPCs[userId].call(function(status){
       if (status===true) {
-        if (localStream === null)
+        if (localStream === null) {
           localStream = userPCs[userId].getLocalStream();
+        }
       }
     });
   }
@@ -140,22 +133,18 @@ socket.on('log', function (array){
 
 function addLocalStream(){
   console.log("addLocalStream: %o",userPCs);
-  for(userId in userPCs)
-  {
+  for(userId in userPCs) {
     var pc = userPCs[userId].getPeerConnection();
     pc.addStream(localStream);
     console.log("Local stream: %o", localStream);
-    //callStats.associateMstWithUserId(pc, userId, "foo", );
-    if(isFirefox)
-    {
+    if(isFirefox) {
       userPCs[userId].doCallIfActive();
     }
   }
 }
 
 function removeLocalStream(){
-  for(userId in userPCs)
-  {
+  for(userId in userPCs) {
     var pc = userPCs[userId].getPeerConnection();
     //pc.removeStream(localStream);
   }
@@ -184,7 +173,7 @@ function sendMessage(message,to,from){
 }
 
 socket.on('onSignaling', function (message,to,from){
-  console.log("onSignaling called; msg=" + message);
+  console.log("onSignaling called; msg: %o", message);
   onSignaling(message,to,from);
 });
 
@@ -204,9 +193,10 @@ onSignaling = function(message,to,from){
         if (status === true) {
           console.log("Call is received now");
           calls++;
-          if (localStream === null)
+          if (localStream === null) {
             localStream = userPCs[to].getLocalStream();
-            userPCs[to].onChannelMessage(message);
+          }
+          userPCs[to].onChannelMessage(message);
         }
       });
     }
@@ -232,23 +222,43 @@ onSignaling = function(message,to,from){
 //error callback function for getUserMedia
 function errorCallback(error){
   console.log('navigator.getUserMedia error: ', error);
+  callStats.reportError(null,room,callStats.webRTCFunctions.getUserMedia,error);
+  socket.emit('disconnect', myUserId, room);
 }
 
 function doGetUserMedia(callback){
   constraints = {
     audio: true,
-    video: true
+    //video: true
   };
+  /*constraints = {
+    audio: {
+      mandatory: {
+        googEchoCancellation: true, // disabling audio processing
+        googAutoGainControl: true,
+        googNoiseSuppression: true,
+        googHighpassFilter: true,
+        googTypingNoiseDetection: true
+        },
+      optional: [{ echoCancellation: true}]
+    },
+    video: {mandatory: { minFrameRate: 50000}, optional: []}
+  };*/
   localVideo = document.querySelector('#localVideo');
   console.log("Do get User Media");
-  getUserMedia(constraints, function(stream) {
+  var p = navigator.mediaDevices.getUserMedia(constraints);
+  //console.log("getUserMedia: %o", requestUserMedia);
+  //var p = requestUserMedia(constraints);
+  p.then(function(stream) {
         console.log("User has granted access to local media.");
-        attachMediaStream(localVideo,stream);
+        //attachMediaStream(localVideo,stream);
+        localVideo.srcObject = stream;
         localVideo.style.opacity = 1;
         localStream = stream;
         if (callback)
             callback(true);
-        },errorCallback);
+        });
+  p.catch(errorCallback);
 }
 
 function csCallback (err, msg){
@@ -268,7 +278,8 @@ function dogetScreenShare(callback){
 }
 
 function dogetFirefoxScreenShare(callback){
-  constraints = {audio: false,
+  constraints = {
+    audio: false,
     video: {
         mozMediaSource: 'window',
         mediaSource: 'window',
