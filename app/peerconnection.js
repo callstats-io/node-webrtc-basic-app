@@ -23,7 +23,7 @@ PeerConnectionChannel = function(to,from,div,localStreamParam,onPCInitialized,on
  // };
 
   var turn_server = {
-    url: 'turn:turn-server-1.dialogue.io:3478',
+    urls: 'turn:turn-server-1.dialogue.io:3478',
     username: 'test',
     credential: '1234',
     realm: 'reTurn'
@@ -31,7 +31,7 @@ PeerConnectionChannel = function(to,from,div,localStreamParam,onPCInitialized,on
 
 
   var turn_server_tls = {
-    url: 'turn:turn-server-1.dialogue.io:5349',
+    urls: 'turn:turn-server-1.dialogue.io:5349',
     username: 'test',
     credential: '1234',
     realm: 'reTurn'
@@ -46,14 +46,16 @@ PeerConnectionChannel = function(to,from,div,localStreamParam,onPCInitialized,on
   // Set up audio and video regardless of what devices are present.
   var sdpConstraints = {'mandatory': {
     'OfferToReceiveAudio':true,
-    'OfferToReceiveVideo':true }};
+    'OfferToReceiveVideo':false }};
 
   var constraints = {
     audio: true,
-    video: true
+    //video: true
   };
 
-  if(window.navigator.userAgent.match('Chrome')) {
+  console.log("Creating PC channel to: %o, from: %o", to, from);
+
+  /*if(window.navigator.userAgent.match('Chrome')) {
     constraints = {
       audio: {
         mandatory: {
@@ -71,7 +73,7 @@ PeerConnectionChannel = function(to,from,div,localStreamParam,onPCInitialized,on
       audio: true,
       video: true
     };
-  }
+  }*/
 
   if (localStreamParam !== null) {
     //console.log("Stream added previously ",localStreamParam,localStream);
@@ -148,17 +150,26 @@ PeerConnectionChannel = function(to,from,div,localStreamParam,onPCInitialized,on
       if (!isInitiator && !isCallStarted) {
         maybeStart();
       }
-      pc.setRemoteDescription(new RTCSessionDescription(message), function() {
+      console.log("Got offer: %o", message);
+      /*pc.setRemoteDescription(new RTCSessionDescription(message), function() {
         doAnswer();
       }, function(error) {
+        console.log("Error callback: %o", error);
         errorCallback(error);
+      });*/
+      var p = pc.setRemoteDescription(new RTCSessionDescription(message));
+      p.then(function() {
+        doAnswer();
       });
-
+      p.catch(function(error) {
+        errorCallback(error)
+      });
     } else if (message.type === 'answer' && isCallStarted) {
       console.log("Got answer: %o", message);
       pc.setRemoteDescription(new RTCSessionDescription(message), function() {
         console.log("Set remote description successful");
       }, function(error) {
+        console.log("Error callback: %o", error);
         errorCallback(error);
       });
     } else if (message.type === 'candidate' && isCallStarted) {
@@ -191,9 +202,7 @@ PeerConnectionChannel = function(to,from,div,localStreamParam,onPCInitialized,on
   function createPeerConnection() {
     try {
       pc = new RTCPeerConnection(pc_config,{optional: [{RtpDataChannels: true},{DtlsSrtpKeyAgreement: true}]});
-      console.log("pc created");
       pc.addStream(localStream);
-      console.log("Stream added");
       pc.onicecandidate = handleIceCandidate;
       pc.onaddstream = handleRemoteStreamAdded;
       pc.onremovestream = handleRemoteStreamRemoved;
@@ -234,7 +243,8 @@ PeerConnectionChannel = function(to,from,div,localStreamParam,onPCInitialized,on
   function handleRemoteStreamAdded(event) {
     console.log('Remote stream added.');
 
-    if ( window.webkitURL ) {
+    attachMediaStream(remoteVideo, event.stream);
+    /*if ( window.webkitURL ) {
       console.log("Calling attachMediaStream %o", event.stream);
       console.log("Remote tracks: %o", event.stream.getTracks());
       console.log("Local stream: %o", localStream);
@@ -247,7 +257,7 @@ PeerConnectionChannel = function(to,from,div,localStreamParam,onPCInitialized,on
     } else {
       console.log('Remote stream not added.');
         //return null;
-    }
+    }*/
 
     var validLine = RegExp.prototype.test.bind(/^([a-z])=(.*)/);
     var reg = /^ssrc:(\d*) ([\w_]*):(.*)/;
@@ -344,9 +354,10 @@ PeerConnectionChannel = function(to,from,div,localStreamParam,onPCInitialized,on
 
   function doGetUserMedia(callback)
   {
-    console.log("Do get User Media");
     if (!localStream) {
-      getUserMedia(constraints, function(stream) {
+      console.log("Do get User Media. No local stream yet added");
+      var p = navigator.mediaDevices.getUserMedia(constraints);
+      p.then(function(stream) {
           console.log("User has granted access to local media.");
           attachMediaStream(localVideo,stream);
           localVideo.style.opacity = 1;
@@ -355,10 +366,14 @@ PeerConnectionChannel = function(to,from,div,localStreamParam,onPCInitialized,on
           if (isInitiator) maybeStart();
           if (callback)
             callback(true);
-        },errorCallback);
+        });
+      p.catch(errorCallback);
     }
     else {
-      if (isInitiator) maybeStart();
+      if (isInitiator) {
+        console.log("Calling maybeStart()");
+        maybeStart();
+      }
       if(callback)
         callback(true);
     }
@@ -449,10 +464,10 @@ PeerConnectionChannel = function(to,from,div,localStreamParam,onPCInitialized,on
     // Set Opus as the preferred codec in SDP if Opus is present.
     //sessionDescription.sdp = preferOpus(sessionDescription.sdp);
     if(sessionDescription.type === "answer") {
-      console.log("Created answer: %o", sessionDescription);
+      console.log("Created answer: %o. To: %o From: %o Me: %o", sessionDescription, to, from);
     }
     pc.setLocalDescription(sessionDescription, function() {
-      console.log('setLocalAndSendMessage sending message' , sessionDescription);
+      console.log('setLocalAndSendMessage sending message %o. To: %o From: %o' , sessionDescription, to, from);
       sendMessage(sessionDescription,to,from);
       pc.addStream(localStream);
     }, function(err) {

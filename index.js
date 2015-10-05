@@ -60,7 +60,7 @@ io.sockets.on('connection', function (socket){
   }
 
   socket.on('signaling', function (message,to,from) {
-    console.log('Got message:', message);
+    console.log('Got message from: %s to %s type: %s', from, to, message.type);
     // make an ICE failure
     /*if(message.type === "candidate") {
       return;
@@ -69,14 +69,16 @@ io.sockets.on('connection', function (socket){
     for(var i=0; i< io.sockets.sockets.length; i++)
     {
       if(io.sockets.sockets[i].id === ids[to]) {
-        io.sockets.sockets[i].emit('onSignaling',message,from,to);
+        //io.sockets.sockets[i].emit('onSignaling',message,from,to);
+        console.log("Sending message to ", to);
+        io.sockets.sockets[i].emit('onSignaling', message, to, from);
       }
     }
     //socket.broadcast.emit('message', message);
   });
 
   socket.on('participant', function (room,userId) {
-    console.log('Got participant', room,userId);
+    console.log('Got participant', room, userId);
     socket.username = userId;
     socket.roomId = room;
     console.log(userId +' has connected with socketid '+socket.id);

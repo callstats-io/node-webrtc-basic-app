@@ -199,6 +199,7 @@ socket.on('created', function (room){
 
 socket.on('newUserJoined', function (userId){
   console.log('This peer has joined ' + userId);
+  console.log("My user ID: ", myUserId);
   if(userId !== myUserId) {
     isChannelReady = true;
   }
@@ -206,8 +207,10 @@ socket.on('newUserJoined', function (userId){
   if ((userId !== myUserId) && (isChannelReady === true)) {
     console.log("newUser detected. Invoking call()");
     userPCs[userId] = new PeerConnectionChannel(userId,myUserId,_div,localStream,onPCInitialized,onPCConnectionError);
+    console.log("PC created. Calling call()");
     userPCs[userId].call(function(status){
       if (status===true) {
+        // this means that I'm initiator
         if (localStream === null) {
           localStream = userPCs[userId].getLocalStream();
         }
@@ -265,23 +268,52 @@ function sendMessage(message,to,from){
 }
 
 socket.on('onSignaling', function (message,to,from){
-  console.log("onSignaling called; msg: %o", message);
   onSignaling(message,to,from);
 });
 
-onSignaling = function(message,to,from){
+onSignaling = function(message, to, from){
+  console.log("onSignaling msg: %o to: %o from: %o myid: %o %o ", message, to, from, myUserId,userPCs[to]);
+
+  if(from === myUserId) {
+    console.log("Ignoring this message");
+    // ignore messages sent by me
+    return;
+  }
+
   var msg = message;
-  if ((userPCs[to] === undefined) || (userPCs[to] === null)) {
+
+  if(msg.type === "offer") {
+      var _div = 'videos';
+      console.log("Call does not exist, create one ",localStream,msg.type);
+      userPCs[from] = new PeerConnectionChannel(from,to,_div,localStream,onPCInitialized,onPCConnectionError);
+      userPCs[from].answer(function(status){
+        if (status === true) {
+          console.log("Call is received now");
+          calls++;
+          if (localStream === null) {
+            localStream = userPCs[from].getLocalStream();
+          }
+          userPCs[from].onChannelMessage(message);
+        }
+      });
+  } else if(msg.type === "answer") {
+      console.log("processing answer");
+      userPCs[from].onChannelMessage(message);
+  } else if(msg.type === "candidate" && userPCs[to]) {
+    userPCs[to].onChannelMessage(message);
+  }
+
+  /*if ((userPCs[to] === undefined) || (userPCs[to] === null)) {
     if (msg.type === "bye") {
       console.log("bye message", message);
       var pc = userPCs[to].getPeerConnection();
       callStats.sendFabricEvent(pc,callStats.fabricEvent.fabricTerminated,room);
       //userPCs[to]=null;
-    } else {
+    } else if(msg.type === "offer") {
       var _div = 'videos';
       console.log("Call does not exist, create one ",localStream,msg.type);
-      userPCs[to] = new PeerConnectionChannel(to,from,_div,localStream,onPCInitialized,onPCConnectionError);
-      userPCs[to].answer(function(status){
+      userPCs[from] = new PeerConnectionChannel(from,to,_div,localStream,onPCInitialized,onPCConnectionError);
+      userPCs[from].answer(function(status){
         if (status === true) {
           console.log("Call is received now");
           calls++;
@@ -291,9 +323,11 @@ onSignaling = function(message,to,from){
           userPCs[to].onChannelMessage(message);
         }
       });
+    } else if(userPCs[from] && msg.type === "answer") {
+      console.log("processing answer");
+      userPCs[from].onChannelMessage(message);
     }
   } else if (userPCs[to]) {
-    console.log("Call does exist,no need to create one");
     userPCs[to].onChannelMessage(message);
     if (msg.type === "bye") {
       var pc = userPCs[to].getPeerConnection();
@@ -308,7 +342,7 @@ onSignaling = function(message,to,from){
     }
   } else {
     console.log("Unexpected error, message:" + message);
-  }
+  }*/
 };
 
 //error callback function for getUserMedia
@@ -318,7 +352,7 @@ function errorCallback(error){
 }
 
 function doGetUserMedia(callback){
-  if(isChrome) {
+  /*if(isChrome) {
     constraints = {
       audio: {
         mandatory: {
@@ -329,27 +363,37 @@ function doGetUserMedia(callback){
         googTypingNoiseDetection: true
         },
         optional: [{ echoCancellation: false}] },
-      video: {mandatory: { /*minFrameRate: 180*/}, optional: []}
+      video: {mandatory: { minFrameRate: 15}, optional: []}
     };
   } else {
     constraints = {
       audio: true,
       video: {width: 4024, height: 4024}
     };
-  }
+  }*/
+  constraints = { audio: true, video: true };
 
-  localVideo = document.querySelector('#localVideo');
+
   console.log("Do get User Media ",constraints);
-  getUserMedia(constraints, function(stream) {
+  var p = navigator.mediaDevices.getUserMedia(constraints)
+  p.then(function(stream) {
         console.log("User has granted access to local media.");
-        //attachMediaStream(localVideo,stream);
-        localVideo.srcObject = stream;
+        attachMediaStream(localVideo,stream);
         localVideo.style.opacity = 1;
         localStream = stream;
         if (callback)
             callback(true);
         });
   p.catch(errorCallback);
+  localVideo = document.querySelector('#localVideo');
+  /*getUserMedia(constraints, function(stream) {
+        console.log("User has granted access to local media.");
+        attachMediaStream(localVideo,stream);
+        localVideo.style.opacity = 1;
+        localStream = stream;
+        if (callback)
+            callback(true);
+        },errorCallback);*/
 }
 
 function csCallback (err, msg){
