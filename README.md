@@ -7,5 +7,6 @@ To run the app:
 node index.js
 
 Dependency 
-node 
+node,
 express - nvm install -g express
+
