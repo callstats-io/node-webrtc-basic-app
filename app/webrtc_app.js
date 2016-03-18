@@ -88,7 +88,6 @@ function statsCallback (stats){
   var $network = $('#network');
 
   $network.text(stats.connectionState+"/"+stats.fabricState);
-
   var userId;
   var bitrateForSsrc = 0;
   var quality = [];
@@ -128,7 +127,7 @@ function statsCallback (stats){
 
 
 function csReportErrorCallback (err, msg){
-  console.log("CallStats report  error: err="+err+" msg="+msg);
+  console.log("CallStats error: err="+err+" msg="+msg);
 }
 
 callStats.initialize(appId, appSecret, myUserId, csInitCallback,statsCallback);
@@ -259,6 +258,8 @@ function endCalls(){
     sendMessage({type: 'bye'},chan.to,chan.from);
     callStats.sendFabricEvent(pc,callStats.fabricEvent.fabricTerminated,room);
     pc.close();
+    console.log("disconnect is ",myUserId,room);
+    socket.emit('disconnect', myUserId,room);
   }
 }
 
@@ -286,7 +287,7 @@ onSignaling = function(message,to,from){
       console.log("bye message", message);
       var pc = userPCs[to].getPeerConnection();
       callStats.sendFabricEvent(pc,callStats.fabricEvent.fabricTerminated,room);
-      userPCs[to]=null;
+      //userPCs[to]=null;
     } else {
       var _div = 'videos';
       console.log("Call does not exist, create one ",localStream,msg.type);
@@ -328,7 +329,6 @@ function errorCallback(error){
 
 function doGetUserMedia(callback){
   if(isChrome) {
-
     constraints = {
       audio: {
         mandatory: {
@@ -344,7 +344,7 @@ function doGetUserMedia(callback){
   } else {
     constraints = {
       audio: true,
-      video: true
+      video: {width: 4024, height: 4024}
     };
   }
 
