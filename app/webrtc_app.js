@@ -471,7 +471,6 @@ function getStats() {
         });
       }
     }
-    userPCs[userId].sendMessage();
   }
 
   return ["success","faile"];
