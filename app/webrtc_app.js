@@ -140,6 +140,7 @@ var onPCInitialized = function(pc, receiver){
   callStats.addNewFabric(pc, receiver, callStats.fabricUsage.multiplex, room, csCallback);
 }
 
+
 var onPCConnectionError = function(pc,error,funcname) {
   callStats.sendFabricEvent(pc, callStats.fabricEvent.fabricSetupFailed, room);
   if(funcname === "createOffer") {
@@ -322,6 +323,7 @@ onSignaling = function(message,to,from){
 //error callback function for getUserMedia
 function errorCallback(error){
   console.log('navigator.getUserMedia error: ', error);
+  callStats.reportError(null,room,callStats.webRTCFunctions.getUserMedia,error);
 }
 
 function doGetUserMedia(callback){
@@ -337,7 +339,7 @@ function doGetUserMedia(callback){
         googTypingNoiseDetection: true
         },
         optional: [{ echoCancellation: false}] },
-      video: true
+      video: { mandatory: {/*minFrameRate: 20000*/}, optional: [] }
     };
   } else {
     constraints = {
