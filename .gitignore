@@ -50,4 +50,4 @@ node_modules
 # c.f. the "OPTIONAL" section at bottom though, for tool-specific variations!
  
 *.lock
- 
+app/config.js 
