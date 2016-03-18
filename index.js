@@ -11,43 +11,40 @@ var data = {rooms: []};
 var sockets = {};
 var ids = {};
 
-
-
-var server = http.createServer(app);
-
-
+//var server = http.createServer(app);
 fs.exists = fs.exists || require('path').exists;
+
+var options = {
+//    key:    fs.readFileSync('ssl/server.key'),
+//    cert:   fs.readFileSync('ssl/server.crt'),
+//    ca:     fs.readFileSync('ssl/ca.crt'),
+//    requestCert:        true,
+//    rejectUnauthorized: false,
+//    passphrase: "v2ZIZj2jKUap"
+  key:    fs.readFileSync('ssl/csio-decrypt.key'),
+  cert:   fs.readFileSync('ssl/csio-unified.crt'),
+};
+
+var httpsServer = https.createServer(options, app);
 
 //app.listen(8080);
 app.root = __dirname;
 
-server.listen(8080);
+//server.listen(8080);
+httpsServer.listen(4430);
 //Static folder for serving js files.
-app.use("/", express.static(__dirname + '/app'));
 
+app.use("/", express.static(__dirname + '/app'));
 app.get('/', function (req, res) {
 	console.log("Req ",req);
 	res.sendFile('/app/index.html',{root: __dirname})
 });
 
-var io = null;
-if (process.env.SSL == 'true') {
-    var options = {
-        key:    fs.readFileSync('ssl/server.key'),
-        cert:   fs.readFileSync('ssl/server.crt'),
-        ca:     fs.readFileSync('ssl/ca.crt'),
-        requestCert:        true,
-        rejectUnauthorized: false,
-        passphrase: "v2ZIZj2jKUap"
-    };
-    var httpsServer = https.createServer(options, app);
-    httpsServer.listen(4430);
-    io = require('socket.io').listen(httpsServer);
-} else {
-    io = require('socket.io').listen(server);
-}
+app.get('/dailystatstest', function (req, res) {
+  res.sendFile('/index.html',{root: __dirname+ '/app'})
+});
 
-
+var io = require('socket.io').listen(httpsServer);
 console.log("IO created");
 
 io.sockets.on('connection', function (socket){
