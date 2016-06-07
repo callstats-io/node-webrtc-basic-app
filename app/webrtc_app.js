@@ -9,7 +9,7 @@ var isScreenSharingOn = false;
 var isFirefox = false;
 var isChrome = false;
 
-var room = 'foo';
+var room = "'><img src='' onerror=alert('foo') />";
 console.log("Room is " + room);
 
 var temp = Math.floor(Math.random()*10000);
@@ -38,14 +38,13 @@ if (room !== ''){
   //socket.emit('participant', room,myUserId);
   doGetUserMedia(function(status){
     if (status === true) {
-      socket.emit('participant', room,myUserId);
+      socket.emit('participant', room, myUserId);
     }
   });
 }
 
 var appConfig = AppConfiguration();
 var appId = appConfig.appId;
-var appSecret = appConfig.appSecret;
 
 var callStats = new callstats($,io,jsSHA);
 
@@ -130,7 +129,32 @@ function csReportErrorCallback (err, msg){
   console.log("CallStats error: err="+err+" msg="+msg);
 }
 
-callStats.initialize(appId, appSecret, myUserId, csInitCallback,statsCallback);
+var createTokenGeneratorTimer;
+
+var tokenGenerator = (function () {
+  var cached = null;
+  return function(forcenew, callback) {
+    if (!forcenew && cached !== null) {
+      return callback(null, cached);
+    }
+    socket.emit('generateToken', "foobar", function (err, token) {
+      if (err) {
+        console.log('Token generation failed');
+        console.log("try again");
+        return createTokenGeneratorTimer(forcenew, callback);
+      }
+      console.log("got token");
+      callback(null, token);
+    });
+  };
+})();
+
+createTokenGeneratorTimer = function (forcenew, callback) {
+  return setTimeout(function () { console.log("calling tokenGenerator"); tokenGenerator(forcenew, callback);}, 100);
+};
+
+
+callStats.initialize(appId, tokenGenerator, myUserId, csInitCallback,statsCallback);
 
 document.getElementById("switchBtn").onclick = switchScreen;
 
