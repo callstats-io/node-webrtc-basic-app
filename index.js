@@ -4,6 +4,9 @@ var http = require('http');
 var https = require('https');
 var fs = require('fs');
 var path = require('path');
+var jwt = require('jsonwebtoken');
+var crypto = require('crypto');
+var config = require('./config.js');
 var numClients = 0;
 
 var usernames = [];
@@ -13,6 +16,9 @@ var ids = {};
 
 var server = http.createServer(app);
 fs.exists = fs.exists || require('path').exists;
+var privKey = null;
+
+privKey = fs.readFileSync('ssl/ecprivate.key');
 
 //app.listen(8080);
 app.root = __dirname;
@@ -22,7 +28,7 @@ server.listen(8080);
 app.use("/", express.static(__dirname + '/app'));
 app.get('/', function (req, res) {
 	console.log("Req ",req);
-	res.sendFile('/app/index.html',{root: __dirname})
+	res.sendFile('/app/index.html',{root: __dirname});
 });
 
 app.get('/dailystatstest', function (req, res) {
@@ -95,6 +101,39 @@ io.sockets.on('connection', function (socket){
     socket.emit('emit(): client ' + socket.id + ' joined room ' + room);
     socket.broadcast.emit('broadcast(): client ' + socket.id + ' joined room ' + room);
 
+  });
+
+  socket.on('generateToken', function (data, callback) {
+    if (socket.username === undefined || socket.username === null) {
+      return callback('userNotJoined');
+    }
+    // First generate the JWTID
+    crypto.randomBytes(48, function(err, buffer) {
+      if (err) {
+        return callback(err);
+      }
+      var tokenid = buffer.toString('hex');
+      var token = null;
+      try {
+        // Try to sign teh token
+        token = jwt.sign(
+          {
+            userID: socket.username,
+            appID: config.appID
+          }, privKey,
+          {
+            algorithm: "ES256",
+            jwtid: tokenid,
+            expiresIn: 300, //5 minutes
+            notBefore: -300 //-5 minutes
+          });
+      } catch (error) {
+        console.log(error);
+        return callback(error);
+      }
+      console.log({action: "GrantToken", user: socket.username, tokenid: tokenid});
+      callback(null, token);
+    });
   });
 
   socket.on('disconnect', function () {
