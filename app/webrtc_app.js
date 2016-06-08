@@ -487,7 +487,6 @@ function csReportErrorCallback (err, msg){
 var params = {
   //disableBeforeUnloadHandler: false
 };
-
 var createTokenGeneratorTimer;
 
 var tokenGenerator = (function () {
@@ -512,7 +511,9 @@ createTokenGeneratorTimer = function (forcenew, callback) {
   return setTimeout(function () { console.log("calling tokenGenerator"); tokenGenerator(forcenew, callback);}, 100);
 };
 
+
 callStats.initialize(appId, tokenGenerator, myUserId, csInitCallback,statsCallback);
+
 
 document.getElementById("switchBtn").onclick = switchScreen;
 
