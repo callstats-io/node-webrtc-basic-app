@@ -278,6 +278,7 @@ function createFabricStatsHandler(localID, remoteID, conferenceID, pc) {
     var codeBase = browserInfo.codebase;
     var localCandidates = {}, remoteCandidates = {};
     var _statsTuple = { "streams": { } };
+    var _statsStringArray = [];
 
     console.log("In createFabricStatsHandler");
 
@@ -297,6 +298,8 @@ function createFabricStatsHandler(localID, remoteID, conferenceID, pc) {
 
     for (var i = 0; i < results.length; ++i) {
       _statsString = parseStats(results[i]);
+      _statsStringArray.push(_statsString);
+
       _statJSON = statsClassifier(JSON.parse(_statsString), codeBase);
       if (!isEmptyDict(_statJSON)) {
         if (_statJSON.hasOwnProperty("Transport")) {
@@ -345,9 +348,9 @@ function createFabricStatsHandler(localID, remoteID, conferenceID, pc) {
     statsFromBrowser.outBoundRemoteStatsKeys = getOutboundRemoteKeys(_statsTuple.streams);
     statsFromBrowser.browserVersion = browserInfo.ver;
     statsFromBrowser.peerConnectionKeys = pcKeys;
+    statsFromBrowser.statsTuple = _statsStringArray;
 
-
-    console.log("Stats tupple ",_statsTuple);
+    console.log("Stats 123 tupple ",_statsStringArray);
     console.log("Local stats ",inBoundLocalStatsKeys, outBoundLocalStatsKeys);
     console.log("Remote stats ",inBoundRemoteStatsKeys, outBoundRemoteStatsKeys);
 
@@ -805,7 +808,3 @@ function dogetChromeScreenShare(callback){
             successCallback, failureCallback);
   }
 }
-
-
-
-
