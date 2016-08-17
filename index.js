@@ -119,7 +119,8 @@ io.sockets.on('connection', function (socket){
         token = jwt.sign(
           {
             userID: socket.username,
-            appID: config.appID
+            appID: config.appID,
+            keyID: config.keyID
           }, privKey,
           {
             algorithm: "ES256",
