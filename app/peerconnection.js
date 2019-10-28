@@ -62,7 +62,6 @@ PeerConnectionChannel = function(to,from,div,localStreamParam,onPCInitialized,on
         googAutoGainControl: true,
         googNoiseSuppression: true,
         googHighpassFilter: true,
-        googTypingNoiseDetection: true
         },
         optional: [{ echoCancellation: false}] },
       video: true
@@ -392,7 +391,7 @@ PeerConnectionChannel = function(to,from,div,localStreamParam,onPCInitialized,on
 
 
         _div.appendChild(remoteVideo);
-        _div.appendChild(remotevideoText);
+        // _div.appendChild(remotevideoText);
 
         var $vid = $('#video_'+tag);
         var $msg = $('#widget-overlay'+tag);
