@@ -22,6 +22,99 @@ console.log("Room is " + room);
 
 var temp = Math.floor(Math.random()*10000);
 var myUserId = temp.toString();
+var aldata = [];
+var naldata = [];
+var webaldata = [];
+var labels = [];
+var myChart;
+let analyser;
+
+function audioAnalyser(stream) {
+  let AudioContext = window.AudioContext || window.webkitAudioContext;
+  let audioContext = new AudioContext();
+  analyser = audioContext.createAnalyser();
+  analyser.fftSize = 512;
+  analyser.smoothingTimeConstant = 0.1;
+  let mediaStreamSource = audioContext.createMediaStreamSource(stream);
+  mediaStreamSource.connect(analyser);
+}
+
+function getRMSInt() {
+  var dataArray = new Float32Array(analyser.fftSize);
+  analyser.getFloatTimeDomainData(dataArray);
+  let sum = 0;
+  for(var i=0; i < dataArray.length; i++) {
+    sum = sum + (dataArray[i] * dataArray[i]);
+  }; 
+
+  sum = sum / dataArray.length;
+  var rms = Math.sqrt(sum);
+  addValuesToPlot(rms, 'wal')
+}
+
+function plotChart() {
+  var ctx = document.getElementById('myChart');
+  
+  myChart = new Chart(ctx, {
+    type: 'line',
+    
+    data: {
+        labels: labels,
+        datasets: [{
+            label: 'AL',
+            data: aldata,
+            borderColor: "green",
+            fill: false,
+        },
+        {
+          label: 'Normalized AL',
+          borderColor: "red",
+          data: naldata,
+          fill: false,
+      },
+      {
+        label: 'webAudio AL',
+        borderColor: "blue",
+        data: webaldata,
+        fill: false,
+    }]
+    },
+    options: {
+      responsive:true,
+      maintainAspectRatio: false
+    }
+  });
+  myChart.canvas.parentNode.style.height = '400px';
+  myChart.canvas.parentNode.style.width = '800px';
+}
+
+function addValuesToPlot(value, type) {
+  var lengthArray = [];
+
+  if (Number.isNaN(value) || value === Infinity) {
+    return 
+  }
+
+  if (type === 'al') {
+    aldata.push(value);
+  } else if (type === 'nal') {
+    naldata.push(value);
+  } else {
+    webaldata.push(value);
+  }
+  lengthArray.push(aldata.length);
+  lengthArray.push(naldata.length);
+  lengthArray.push(webaldata.length);
+
+  lengthArray.sort();
+  let maxLength = lengthArray[lengthArray.length-1];
+  if (labels.length+1 === maxLength) {
+    labels.push(labels.length + 1);
+  }
+  myChart.update();
+}
+
+plotChart();
 
 /**
 * Detect broswer os, name, version info
@@ -186,7 +279,6 @@ if(isChrome) {
       googAutoGainControl: true,
       googNoiseSuppression: true,
       googHighpassFilter: true,
-      googTypingNoiseDetection: true
       },
       optional: [{ echoCancellation: true}] },
     video: {mandatory: {/*minFrameRate: 20000*/}, optional: []}
@@ -255,45 +347,6 @@ function getMinQuality (quality) {
 
 function statsCallback (stats){
   console.log("processed stats ",stats);
-  var $bitrate = $('#bitrate');
-  var $network = $('#network');
-
-  $network.text(stats.connectionState+"/"+stats.fabricState);
-  var userId;
-  var bitrateForSsrc = 0;
-  var quality = [];
-  for(userId in userPCs)
-  {
-    bitrateForSsrc = 0;
-    var $bitratetemp = $('#bitrate_'+userId);
-    var $networktemp = $('#network_'+userId);
-    var $qualitytemp = $('#quality_'+userId);
-    var ssrcs = userPCs[userId].getSSRCs();
-    $networktemp.text(stats.connectionState+"/"+stats.fabricState);
-    var ssrc;
-    var reportType;
-    var i;
-    quality = [];
-    for( i = 0; i < ssrcs.length; i++) {
-      ssrc = ssrcs[i];
-      if(stats.streams[ssrc]) {
-        if(stats.streams[ssrc].bitrate) {
-          bitrateForSsrc = bitrateForSsrc + stats.streams[ssrc].bitrate;
-        }
-        if(stats.streams[ssrc].quality) {
-          quality.push(stats.streams[ssrc].quality);
-        }
-      }
-    }
-    if(bitrateForSsrc > 0) {
-      bitrateForSsrc = bitrateForSsrc.toFixed(2);
-      $bitratetemp.text(bitrateForSsrc+"Kbps");
-      var processedQuality = getMinQuality(quality);
-      $qualitytemp.text("Q - "+processedQuality);
-      console.log("Quality is ",quality);
-    }
-    console.log("Userid and ssrcs ",userId,ssrcs);
-  }
 }
 
 
@@ -585,34 +638,41 @@ function getPeerConnectionKeys(pc) {
   return Object.keys(all);
 }
 
-setInterval(getStats,10000);
+setInterval(getStats,50);
+var lastAE = null;
+var lastAS = null;
+var lastAL = null;
 
 function getStats() {
-  var codeBase = browserInfo.codebase;
+  getRMSInt();
+  /*
   for(var userId in userPCs)
   {
     var pc = userPCs[userId].getPeerConnection();
-
-    if (pc) {
-      pcKeys = getPeerConnectionKeys(pc);
-      if (codeBase === codeBaseType.firefox || browserInfo.name === "Safari") {
-        pc.getStats(null, createFabricStatsHandler(myUserId, userId, "foo", pc),
-          function logError(err) {
-            console.log("Error");
-        });
-      } else if(codeBase === codeBaseType.chrome) {
-        pc.getStats(createFabricStatsHandler(myUserId, userId, "foo", pc));
-      } else if(codeBase === codeBaseType.edge) {
-        pc.getStats()
-        .then(createFabricStatsHandler(myUserId, userId, "foo", pc))
-        .catch(function(err) {
-          console.log("Error");
-        });
+    pc.getStats().then((stats) => {
+      for (var s of stats) {
+        var a = s[1];
+        if (a["type"] === "track") {
+          if ("audioLevel" in a) {
+            var al = a["audioLevel"];
+            var ae = a["totalAudioEnergy"];
+            var as = a["totalSamplesDuration"];
+    
+            if (lastAE) {
+              var currentValue = Math.sqrt((ae - lastAE) / (as - lastAS));
+              getRMSInt();
+              addValuesToPlot(al, 'al'); 
+              addValuesToPlot(currentValue, 'nal'); 
+            }
+            lastAE = ae;
+            lastAS = as;
+            lastAL = al;
+          }
+        }
       }
-    }
-  }
-
-  return ["success","faile"];
+    });
+  }*/
+  return ["success","failed"];
 }
 
 function getstats() {
@@ -629,12 +689,21 @@ var params = {
 };
 
 callStats.initialize(appId, appSecret, myUserId, csInitCallback,statsCallback);
+if (callStats.getTurnCredentials) {
+  callStats.getTurnCredentials(appId, appSecret)
+  .then((turnCredentials) => {
+    console.log('got turn credentials ', turnCredentials, pc);
+  })
+  .catch((err) => {
+    console.log('Turn err', err);
+  });
+}
 
-document.getElementById("switchBtn").onclick = switchScreen;
+// document.getElementById("switchBtn").onclick = switchScreen;
 
 var onPCInitialized = function(pc, receiver){
   console.log("Add new Fabric event to CS ",pc);
-  callStats.addNewFabric(pc, receiver, callStats.fabricUsage.multiplex, room, csCallback);
+  // callStats.addNewFabric(pc, receiver, callStats.fabricUsage.multiplex, room, csCallback);
 }
 
 
@@ -837,6 +906,7 @@ function doGetUserMedia(callback){
         attachMediaStream(localVideo,stream);
         localVideo.style.opacity = 1;
         localStream = stream;
+        audioAnalyser(stream);
         if (callback)
             callback(true);
         },errorCallback);

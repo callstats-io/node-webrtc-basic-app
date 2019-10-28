@@ -58,18 +58,22 @@
           </nav>
         </div>
       </header>
-      <div id='container'>
         <center>
-          <div class="btn-group">
-            <button id="switchBtn" class="btn btn-default btn-xs dropdown-toggle" type="button" aria-haspopup="true" aria-expanded="false"> Switch source </button>
-          </div><br><br>
-          <video muted width="480" height="360" id='localVideo' autoplay ></video>
+            <div id="the whole thing" style="height:100%; width:100%; overflow: hidden;">
+              <div id="leftThing" style="float: left; width:50%;">
+                <canvas id="myChart" width="480" height="360"></canvas>
+              </div>
+              <div id="content" style="float: left; width:50%;">
+                  <video muted width="480" height="360" id='localVideo' autoplay ></video>
+              </div>
+            </div>
         </center>
+      <div id='container'>
         <div id='videos'>
         </div>
-        <br><br>
       </div>
     </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.8.0/Chart.bundle.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/1.3.5/socket.io.js"></script>
     <script src="https://cdn.temasys.com.sg/adapterjs/0.11.x/adapter.min.js"></script>
     <script src="config.js"></script>
@@ -77,10 +81,12 @@
     <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jsSHA/1.5.0/sha.js"></script>
     <!-- <script type="text/javascript" src="http://127.0.0.1:3000/static/callstats.js"></script> -->
     <!-- <script type="text/javascript" src="https://api.callstats.io/static/callstats.min.js"></script >-->
-    <script type="text/javascript" src="https://test-api-1.callstats.io/static/callstats.min.js"></script>
+    <script type="text/javascript" src="https://test-api.callstats.io/static/callstats.min.js"></script>
     <!-- <script type="text/javascript" src="https://test-bridge-collector.callstats.io/static/callstats.js"></script> -->
     <script src='webrtc_app.js'></script>
     <script src='peerconnection.js'></script>
+    
+    
 
     <script>
       (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
@@ -91,20 +97,5 @@
       ga('create', 'UA-64420800-1', 'auto');
       ga('send', 'pageview');
     </script>
-
-    <footer class='text-center'>
-      <div class="container">
-        <p> <span class="made-in-hel">Made in HELSINKI</span> &copy; 2013-2014 Dialogue.io Inc. </p>
-        <ul>
-          <li><a href="http://www.callstats.io/about/">About</a></li>
-          <li><a href="http://www.callstats.io/about/">API</a></li>
-          <li><a href="http://www.callstats.io/arch/">Architecture</a></li>
-          <li><a href="http://www.callstats.io/blog/">Blog</a></li>
-          <li><a href="http://www.callstats.io/terms/">Terms</a></li>
-          <li><a href="http://www.callstats.io/privacy/">Privacy</a></li>
-          <li><a href="http://www.callstats.io/contact/">Contact</a></li>
-        </ul>
-      </div>
-    </footer>
   </body>
 </html>
