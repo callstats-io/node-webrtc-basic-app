@@ -13,7 +13,7 @@
   "license": "ISC",
   "dependencies": {
     "express": "^4.13.3",
-    "socket.io": "^2.3.0"
+    "socket.io": "^2.5.0"
   },
   "private": true,
   "devDependencies": {}
